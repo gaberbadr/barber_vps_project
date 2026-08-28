@@ -1,0 +1,86 @@
+.mrx-brand-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.mrx-brand-logo:hover {
+  opacity: 0.85;
+}
+
+.mrx-brand-logo:active {
+  transform: scale(0.96);
+}
+
+.mrx-brand-top {
+  display: flex;
+  align-items: baseline;
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  color: #FFFFFF;
+  line-height: 1;
+}
+
+.mrx-text {
+  font-size: 1.8rem;
+  letter-spacing: 0.05em;
+}
+
+.mrx-dot {
+  font-size: 1.8rem;
+  color: var(--mrx-gold, #C9A96E); /* Gold dot for a premium touch */
+  margin: 0 0.1rem;
+}
+
+.mrx-x {
+  font-size: 2.2rem;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+}
+
+.mrx-x-icon {
+  position: absolute;
+  width: 1.4rem;
+  height: 1.4rem;
+  color: var(--mrx-gold, #C9A96E);
+  opacity: 0.8;
+  /* Position it perfectly over the center of the X */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-15deg);
+}
+
+.mrx-brand-bottom {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.45rem;
+  font-weight: 600;
+  letter-spacing: 0.6em; /* Extremely wide tracking for "BARBER" */
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 2px;
+  text-transform: uppercase;
+  margin-right: -0.6em; /* Counteract letter-spacing on last letter to center it */
+}
+
+/* Modifier for mobile navbars where we need a slightly smaller logo */
+.mrx-brand-logo.small .mrx-text,
+.mrx-brand-logo.small .mrx-dot {
+  font-size: 1.4rem;
+}
+.mrx-brand-logo.small .mrx-x {
+  font-size: 1.7rem;
+}
+.mrx-brand-logo.small .mrx-x-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+.mrx-brand-logo.small .mrx-brand-bottom {
+  font-size: 0.35rem;
+  margin-top: 1px;
+}

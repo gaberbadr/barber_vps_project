@@ -1,0 +1,102 @@
+.working-hours {
+  max-width: 800px;
+}
+
+.hours-container {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.day-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(11, 10, 9, 0.6);
+  border: 1px solid rgba(169, 139, 98, 0.1);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.day-row:hover {
+  border-color: rgba(169, 139, 98, 0.3);
+}
+
+.day-row.closed {
+  opacity: 0.6;
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.day-name {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 150px;
+}
+
+.day-name .name {
+  color: #F8F5F2;
+  font-weight: 500;
+}
+
+.time-inputs {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.time-inputs input[type="time"] {
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(169, 139, 98, 0.2);
+  border-radius: 8px;
+  color: #F8F5F2;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  color-scheme: dark;
+}
+
+.time-inputs input[type="time"]:focus {
+  outline: none;
+  border-color: #A98B62;
+}
+
+.separator {
+  color: #A39C93;
+  font-size: 0.9rem;
+}
+
+.closed-label {
+  color: #A98B62;
+  font-style: italic;
+  font-size: 0.95rem;
+  padding-right: 1rem;
+}
+
+.form-actions {
+  margin-top: 1rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 600px) {
+  .day-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+  
+  .time-inputs {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}

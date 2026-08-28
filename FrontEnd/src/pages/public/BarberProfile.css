@@ -1,0 +1,430 @@
+/* BarberProfile.css - MR.X Immersive Glassmorphic Redesign */
+
+.barber-profile-immersive {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  margin-top: -80px; /* Offset global header */
+  background-color: var(--color-background);
+  color: var(--color-text);
+  display: flex;
+  align-items: flex-start;
+  padding: 140px 0 60px; /* Generous padding so it never touches the navbar */
+}
+
+/* ==========================================================================
+   1. IMMERSIVE BACKGROUND
+   ========================================================================== */
+.immersive-bg-container {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 1;
+  overflow: hidden; /* Prevent the scaling image from overflowing at the bottom */
+}
+
+.immersive-bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(60%) contrast(1.2);
+  animation: slowPan 30s ease infinite alternate;
+}
+
+@keyframes slowPan {
+  0% { transform: scale(1.05) translate(0, 0); }
+  100% { transform: scale(1.1) translate(-2%, -2%); }
+}
+
+.immersive-gradient-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  /* Very dark on left and bottom, transitioning to dark right */
+  background: linear-gradient(90deg, rgba(11, 10, 9, 0.8) 0%, rgba(11, 10, 9, 0.6) 100%),
+              linear-gradient(0deg, rgba(11, 10, 9, 1) 0%, rgba(11, 10, 9, 0) 60%);
+}
+
+/* ==========================================================================
+   2. LAYOUT GRID
+   ========================================================================== */
+.immersive-layout-grid {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 1600px;
+  padding: 2rem 4rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: flex-start; /* Ensure items don't overflow top */
+  margin-top: 4vh; /* Push down slightly for visual centering without breaking scroll */
+}
+
+/* ==========================================================================
+   3. LEFT SIDE: INFO
+   ========================================================================== */
+.immersive-info-side {
+  animation: slideRight 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.barber-portrait-wrapper {
+  width: 140px;
+  height: 180px;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 2rem;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+  border: 1px solid rgba(169, 139, 98, 0.3);
+  background: rgba(11, 10, 9, 0.5);
+  z-index: 3;
+}
+
+/* Subtle gradient fade at the bottom of the portrait */
+.barber-portrait-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 40%;
+  background: linear-gradient(to bottom, transparent 0%, rgba(11, 10, 9, 0.8) 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.barber-portrait {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center; /* Ensures the head is never chopped off */
+  filter: contrast(1.1) brightness(0.9);
+  transition: transform 0.6s ease;
+  z-index: 1;
+}
+
+.barber-portrait-wrapper:hover .barber-portrait {
+  transform: scale(1.05);
+}
+
+.barber-portrait-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #151311, #0B0A09);
+  color: #A98B62;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-size: 4rem;
+  z-index: 1;
+}
+
+@keyframes slideRight {
+  0% { opacity: 0; transform: translateX(-40px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+.immersive-eyebrow {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  letter-spacing: 6px;
+  color: #A98B62;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #A98B62;
+  padding-bottom: 0.5rem;
+}
+
+.immersive-name {
+  font-family: var(--font-heading);
+  font-size: clamp(4rem, 8vw, 7rem);
+  line-height: 0.9;
+  font-weight: 400;
+  color: #fff;
+  margin: 0 0 2rem 0;
+  letter-spacing: -2px;
+  text-shadow: 0 10px 30px rgba(0,0,0,0.8);
+}
+
+.immersive-status-block {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-indicator.active {
+  background-color: #A98B62;
+  box-shadow: 0 0 10px rgba(169, 139, 98, 0.5);
+}
+
+.status-indicator.inactive {
+  background-color: #8c8378;
+}
+
+.status-text {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: #fff;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.immersive-duration {
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  color: #8c8378;
+  margin-bottom: 3rem;
+}
+
+.immersive-quote {
+  font-family: var(--font-serif, 'Playfair Display', serif);
+  font-style: italic;
+  font-size: 1.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  border-left: 2px solid #A98B62;
+  padding-left: 2rem;
+  max-width: 500px;
+}
+
+/* ==========================================================================
+   4. RIGHT SIDE: GLASS CARD
+   ========================================================================== */
+.immersive-booking-side {
+  display: flex;
+  justify-content: flex-end;
+  animation: slideLeft 1s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.2s;
+  opacity: 0;
+}
+
+@keyframes slideLeft {
+  0% { opacity: 0; transform: translateX(40px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+.glass-booking-card {
+  width: 100%;
+  max-width: 500px;
+  background: rgba(21, 19, 17, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  padding: 4rem 3rem;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+}
+
+.glass-title {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  color: #fff;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: 2px;
+}
+
+.glass-subtitle {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: #8c8378;
+  margin-bottom: 3rem;
+}
+
+.glass-date-picker {
+  margin-bottom: 3rem;
+  position: relative;
+}
+
+.glass-date-picker input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(169, 139, 98, 0.5);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 1.2rem;
+  padding: 1rem 0;
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+  color-scheme: dark;
+}
+
+.glass-date-picker input:focus {
+  outline: none;
+  border-bottom-color: #A98B62;
+}
+
+.glass-slots-container {
+  min-height: 180px;
+  margin-bottom: 3rem;
+}
+
+.glass-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.glass-slot {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  color: #fff;
+  padding: 1rem 0;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.glass-slot:hover:not(.skeleton) {
+  background: rgba(169, 139, 98, 0.1);
+  border-color: #A98B62;
+  color: #A98B62;
+}
+
+.glass-slot.selected {
+  background: #A98B62;
+  color: #0b0a09;
+  font-weight: 600;
+  border-color: #A98B62;
+  box-shadow: 0 0 20px rgba(169, 139, 98, 0.4);
+}
+
+.glass-slot.skeleton {
+  background: rgba(255, 255, 255, 0.02);
+  height: 50px;
+  animation: pulse 1.5s infinite;
+}
+
+.glass-message {
+  text-align: center;
+  color: #8c8378;
+  padding: 2rem 0;
+  font-family: var(--font-body);
+}
+
+.glass-action-area {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  animation: slideRight 0.4s ease forwards;
+}
+
+.glass-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.dot-separator {
+  color: #A98B62;
+}
+
+.highlight-time {
+  color: #A98B62;
+  font-weight: 600;
+}
+
+.btn-glass-confirm {
+  background: #A98B62;
+  color: #0b0a09;
+  border: none;
+  padding: 1rem 2rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-glass-confirm:hover {
+  background: #d4ba96;
+  transform: translateX(5px);
+}
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+@media (max-width: 1024px) {
+  .immersive-layout-grid {
+    grid-template-columns: 1fr;
+    padding: 2rem;
+    gap: 3rem;
+    margin-top: 2rem;
+  }
+  
+  .barber-profile-immersive {
+    height: auto;
+    min-height: 100vh;
+    padding-top: 100px;
+  }
+  
+  .immersive-gradient-overlay {
+    background: linear-gradient(180deg, rgba(11, 10, 9, 0.6) 0%, rgba(11, 10, 9, 0.95) 100%);
+  }
+
+  .immersive-info-side {
+    align-items: center;
+    text-align: center;
+  }
+
+  .barber-portrait-wrapper {
+    width: 120px;
+    height: 160px;
+    border-radius: 12px;
+  }
+
+  .immersive-eyebrow {
+    margin: 0 auto 1.5rem;
+  }
+
+  .immersive-status-block {
+    justify-content: center;
+  }
+
+  .immersive-quote {
+    border-left: none;
+    border-top: 2px solid #A98B62;
+    padding-left: 0;
+    padding-top: 2rem;
+    margin: 0 auto;
+  }
+
+  .immersive-booking-side {
+    justify-content: center;
+  }
+
+  .glass-booking-card {
+    padding: 3rem 2rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .immersive-name {
+    font-size: 3rem;
+  }
+  .glass-slots-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .glass-action-area {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .btn-glass-confirm {
+    width: 100%;
+  }
+}

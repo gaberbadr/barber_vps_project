@@ -1,0 +1,245 @@
+.barber-dashboard {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 3rem;
+}
+
+.page-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.5rem;
+  color: #F8F5F2;
+  margin-bottom: 0.5rem;
+}
+
+.page-header .subtitle {
+  color: #A98B62;
+  font-size: 1.1rem;
+}
+
+.agenda-container {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 2rem;
+  min-height: 400px;
+}
+
+.agenda-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 2rem;
+  padding: 1.5rem;
+  background: rgba(11, 10, 9, 0.6);
+  border: 1px solid rgba(169, 139, 98, 0.1);
+  border-radius: 12px;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.timeline-item:hover {
+  transform: translateX(4px);
+  border-color: rgba(169, 139, 98, 0.3);
+}
+
+.time-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 80px;
+  border-right: 2px solid rgba(169, 139, 98, 0.2);
+  padding-right: 1.5rem;
+}
+
+.time-start {
+  color: #F8F5F2;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.time-end {
+  color: #A39C93;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+}
+
+.details-col {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.customer-info h3 {
+  font-size: 1.25rem;
+  color: #F8F5F2;
+  margin-bottom: 0.25rem;
+}
+
+.customer-info .phone {
+  color: #A39C93;
+  font-size: 0.9rem;
+}
+
+.booking-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.booking-meta .price {
+  color: #A98B62;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Skeletons */
+.timeline-item.skeleton {
+  pointer-events: none;
+}
+.skeleton-block {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  animation: pulse 1.5s infinite;
+}
+.time-col.skeleton-block {
+  height: 40px;
+  width: 60px;
+  border: none;
+}
+.details-col.skeleton-block {
+  height: 40px;
+  width: 100%;
+}
+
+/* Empty / Error States */
+.empty-state, .error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4rem 2rem;
+  height: 100%;
+}
+
+.empty-state .icon, .error-state .icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+  color: #F8F5F2;
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+  color: #A39C93;
+}
+
+.error-state p {
+  color: #E85F5F;
+  background: rgba(232, 95, 95, 0.1);
+  padding: 1rem 2rem;
+  border-radius: 8px;
+}
+
+/* ── Status Badges ───────────────────────────────────────── */
+.status-badge {
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: inline-block;
+}
+
+.status-badge.confirmed {
+  background: rgba(212, 175, 55, 0.15);
+  color: #ffdf73;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.status-badge.completed {
+  background: rgba(46, 125, 50, 0.15);
+  color: #4CAF50;
+  border: 1px solid rgba(46, 125, 50, 0.3);
+}
+
+.status-badge.cancelled {
+  background: rgba(198, 40, 40, 0.15);
+  color: #EF5350;
+  border: 1px solid rgba(198, 40, 40, 0.3);
+}
+
+.status-badge.arrived {
+  background: rgba(30, 120, 90, 0.18);
+  color: #4ECDA4;
+  border: 1px solid rgba(78, 205, 164, 0.3);
+}
+
+.status-badge.didnotarrive {
+  background: rgba(120, 60, 20, 0.18);
+  color: #E8975F;
+  border: 1px solid rgba(232, 151, 95, 0.3);
+}
+
+/* ── Barber Quick-Status Action Buttons ───────────────────── */
+.barber-status-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.btn-status {
+  padding: 0.3rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  font-family: 'Inter', sans-serif;
+}
+
+.btn-status:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-status.arrived {
+  background: rgba(30, 120, 90, 0.15);
+  color: #4ECDA4;
+  border-color: rgba(78, 205, 164, 0.3);
+}
+
+.btn-status.arrived:hover:not(:disabled) {
+  background: rgba(78, 205, 164, 0.22);
+  border-color: #4ECDA4;
+  box-shadow: 0 0 8px rgba(78, 205, 164, 0.2);
+}
+
+.btn-status.didnotarrive {
+  background: rgba(120, 60, 20, 0.15);
+  color: #E8975F;
+  border-color: rgba(232, 151, 95, 0.3);
+}
+
+.btn-status.didnotarrive:hover:not(:disabled) {
+  background: rgba(232, 151, 95, 0.22);
+  border-color: #E8975F;
+  box-shadow: 0 0 8px rgba(232, 151, 95, 0.2);
+}

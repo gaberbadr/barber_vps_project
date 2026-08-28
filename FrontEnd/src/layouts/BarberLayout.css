@@ -1,0 +1,189 @@
+.barber-layout {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  width: 100vw;
+  background: radial-gradient(circle at 50% 0%, rgba(21, 19, 17, 0.8) 0%, rgba(8, 7, 6, 0.95) 100%),
+              url('/mrx-admin-bg.png') no-repeat center center fixed;
+  background-size: cover;
+  color: #F8F5F2;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+}
+
+.mobile-header {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: rgba(11, 10, 9, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(169, 139, 98, 0.1);
+  z-index: 100;
+}
+
+.mobile-header .logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #A98B62;
+  letter-spacing: 2px;
+}
+
+.menu-toggle {
+  background: none;
+  border: none;
+  color: #F8F5F2;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.barber-sidebar {
+  width: 260px;
+  background: rgba(11, 10, 9, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-right: 1px solid rgba(169, 139, 98, 0.1);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease;
+  z-index: 1000;
+}
+
+.sidebar-header {
+  padding: 2rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebar-header .logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #A98B62;
+  letter-spacing: 2px;
+  cursor: pointer;
+}
+
+.close-sidebar {
+  display: none;
+  background: none;
+  border: none;
+  color: #F8F5F2;
+  font-size: 2rem;
+  cursor: pointer;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  color: #A39C93;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.nav-icon {
+  margin-right: 1rem;
+  font-size: 1.2rem;
+}
+
+.sidebar-nav a:hover {
+  color: #F8F5F2;
+  background: rgba(169, 139, 98, 0.05);
+}
+
+.sidebar-nav a.active {
+  color: #A98B62;
+  background: linear-gradient(90deg, rgba(169, 139, 98, 0.1) 0%, transparent 100%);
+  border-left: 3px solid #A98B62;
+}
+
+.sidebar-footer {
+  padding: 1.5rem;
+  border-top: 1px solid rgba(169, 139, 98, 0.1);
+}
+
+.btn-logout {
+  width: 100%;
+  padding: 0.8rem;
+  background: transparent;
+  color: #E85F5F;
+  border: 1px solid rgba(232, 95, 95, 0.3);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-logout:hover {
+  background: rgba(232, 95, 95, 0.1);
+  border-color: #E85F5F;
+}
+
+.barber-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2.5rem;
+}
+
+.sidebar-overlay {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .barber-layout {
+    flex-direction: column;
+  }
+
+  .mobile-header {
+    display: flex;
+  }
+
+  .barber-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    transform: translateX(-100%);
+  }
+
+  .barber-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .close-sidebar {
+    display: block;
+  }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+  }
+
+  .barber-content {
+    padding: 1.5rem;
+  }
+}

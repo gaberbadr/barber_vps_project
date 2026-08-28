@@ -1,0 +1,177 @@
+/* 
+  CustomerLayout.css
+  Dark Luxury Aesthetic
+  Background: #0B0A09, Surface: #151311, Highlight: #A98B62
+*/
+
+.customer-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #0B0A09;
+  color: #EDE7DC;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Sidebar Styling */
+.customer-sidebar {
+  width: 260px;
+  background-color: #0B0A09;
+  border-right: 1px solid rgba(169, 139, 98, 0.15);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.sidebar-brand {
+  padding: 2rem;
+}
+
+.sidebar-brand a {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #A98B62;
+  text-decoration: none;
+  letter-spacing: 2px;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 0 1rem;
+  margin-top: 2rem;
+}
+
+.sidebar-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  color: #8C867E;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.sidebar-nav a:hover {
+  background-color: rgba(169, 139, 98, 0.05);
+  color: #EDE7DC;
+}
+
+.sidebar-nav a.active {
+  background-color: rgba(169, 139, 98, 0.1);
+  color: #A98B62;
+  border-left: 3px solid #A98B62;
+}
+
+.sidebar-footer {
+  padding: 2rem 1.5rem;
+  border-top: 1px solid rgba(169, 139, 98, 0.15);
+}
+
+.user-info {
+  margin-bottom: 1rem;
+}
+
+.user-email {
+  font-size: 0.9rem;
+  color: #8C867E;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-logout {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: transparent;
+  color: #8C867E;
+  border: 1px solid rgba(169, 139, 98, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+  background-color: rgba(239, 83, 80, 0.1);
+  color: #EF5350;
+  border-color: rgba(239, 83, 80, 0.3);
+}
+
+/* Main Content Area */
+.customer-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-image: 
+    radial-gradient(circle at 0% 0%, rgba(169, 139, 98, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(169, 139, 98, 0.02) 0%, transparent 50%);
+  overflow-y: auto;
+}
+
+.customer-content {
+  padding: 2rem 3rem;
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.customer-header-mobile {
+  display: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .customer-layout {
+    flex-direction: column;
+  }
+  
+  .customer-sidebar {
+    display: none; /* In a full implementation, you'd add a toggle */
+  }
+  
+  .customer-header-mobile {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background-color: #0B0A09;
+    border-bottom: 1px solid rgba(169, 139, 98, 0.15);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  
+  .mobile-brand {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #A98B62;
+    text-decoration: none;
+  }
+  
+  .btn-menu {
+    background: none;
+    border: none;
+    color: #A98B62;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+  
+  .customer-content {
+    padding: 1.5rem 1rem;
+  }
+}

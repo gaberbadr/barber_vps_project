@@ -1,0 +1,233 @@
+/* 
+  MyBookings.css
+  Dark Luxury Aesthetic
+*/
+
+.my-bookings-container {
+  max-width: 900px;
+  margin: 0 auto;
+  color: #EDE7DC;
+}
+
+.bookings-header {
+  margin-bottom: 2rem;
+}
+
+.bookings-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.5rem;
+  color: #A98B62;
+  margin: 0 0 0.5rem 0;
+}
+
+.bookings-header p {
+  color: #8C867E;
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.bookings-tabs {
+  display: flex;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(169, 139, 98, 0.2);
+  margin-bottom: 2rem;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  color: #8C867E;
+  font-size: 1.1rem;
+  font-weight: 500;
+  padding: 1rem 1.5rem;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: #EDE7DC;
+}
+
+.tab-btn.active {
+  color: #A98B62;
+  border-bottom-color: #A98B62;
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 0;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background-color: #151311;
+  border: 1px dashed rgba(169, 139, 98, 0.3);
+  border-radius: 12px;
+}
+
+.empty-state h3 {
+  color: #A98B62;
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-state p {
+  color: #8C867E;
+  margin: 0;
+}
+
+.bookings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.booking-card {
+  background-color: #151311;
+  border: 1px solid rgba(169, 139, 98, 0.15);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s;
+}
+
+.booking-card:hover {
+  border-color: rgba(169, 139, 98, 0.3);
+}
+
+.booking-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background-color: #201C18;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.booking-date {
+  font-weight: 600;
+  color: #EDE7DC;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-pending { background-color: rgba(255, 167, 38, 0.1); color: #FFA726; border: 1px solid rgba(255, 167, 38, 0.3); }
+.status-confirmed { background-color: rgba(102, 187, 106, 0.1); color: #66BB6A; border: 1px solid rgba(102, 187, 106, 0.3); }
+.status-cancelled { background-color: rgba(239, 83, 80, 0.1); color: #EF5350; border: 1px solid rgba(239, 83, 80, 0.3); }
+.status-completed { background-color: rgba(169, 139, 98, 0.1); color: #A98B62; border: 1px solid rgba(169, 139, 98, 0.3); }
+
+.booking-card-body {
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.booking-barber h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+  color: #A98B62;
+}
+
+.booking-barber p {
+  margin: 0;
+  color: #8C867E;
+  font-size: 0.95rem;
+}
+
+.booking-price {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+}
+
+.booking-price span {
+  font-size: 0.8rem;
+  color: #8C867E;
+  text-transform: uppercase;
+}
+
+.booking-price strong {
+  font-size: 1.5rem;
+  color: #EDE7DC;
+}
+
+.booking-services {
+  padding: 0 1.5rem 1.5rem;
+  color: #8C867E;
+  font-size: 0.9rem;
+}
+
+.booking-card-footer {
+  padding: 1rem 1.5rem;
+  background-color: rgba(239, 83, 80, 0.05);
+  border-top: 1px solid rgba(239, 83, 80, 0.1);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-cancel-booking {
+  background: none;
+  border: 1px solid rgba(239, 83, 80, 0.5);
+  color: #EF5350;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-cancel-booking:hover {
+  background-color: rgba(239, 83, 80, 0.1);
+  border-color: #EF5350;
+}
+
+.history-card {
+  opacity: 0.85;
+}
+
+.history-card:hover {
+  opacity: 1;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.pagination button {
+  background-color: #201C18;
+  border: 1px solid rgba(169, 139, 98, 0.3);
+  color: #A98B62;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pagination button:hover:not(:disabled) {
+  background-color: rgba(169, 139, 98, 0.1);
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #8C867E;
+}
+
+.pagination span {
+  color: #8C867E;
+  font-size: 0.9rem;
+}

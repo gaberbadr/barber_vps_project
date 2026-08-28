@@ -1,0 +1,85 @@
+using Application.Interfaces;
+using Domain.Entities;
+using ErrorOr;
+using MediatR;
+using Microsoft.AspNetCore.Identity;
+using Error = ErrorOr.Error;
+
+namespace Application.Features.Auth.Commands.SendOTP
+{
+    public class SendOTPCommandHandler : IRequestHandler<SendOTPCommand, ErrorOr<Success>>
+    {
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IEmailSender _emailSender;
+        private readonly IEmailConfiguration _emailConfiguration;
+
+        public SendOTPCommandHandler(UserManager<ApplicationUser> userManager, IEmailSender emailSender, IEmailConfiguration emailConfiguration)
+        {
+            _userManager = userManager;
+            _emailSender = emailSender;
+            _emailConfiguration = emailConfiguration;
+        }
+
+        public async Task<ErrorOr<Success>> Handle(SendOTPCommand request, CancellationToken cancellationToken)
+        {
+            try
+            {
+                // Find or create user
+                var user = await _userManager.FindByEmailAsync(request.Email);
+                if (user == null)
+                {
+                    user = new ApplicationUser
+                    {
+                        Email = request.Email,
+                        UserName = request.Email,
+                        EmailConfirmed = false
+                    };
+                    var result = await _userManager.CreateAsync(user);
+                    if (!result.Succeeded)
+                    {
+                        return Error.Failure("auth.user.creation.failed", "فشل إنشاء حساب المستخدم.");
+                    }
+                }
+
+                // Check if user is blocked
+                if (!user.IsActive)
+                {
+                    return Error.Failure("auth.user.blocked", "حسابك موقوف. يرجى التواصل مع الدعم.");
+                }
+
+                // Check if an existing OTP is still valid
+                if (user.CodeExpiresAt != null && user.CodeExpiresAt > DateTime.UtcNow)
+                {
+                    return Error.Conflict("auth.otp.valid", "يوجد كود تحقق صالح بالفعل.");
+                }
+
+                // Generate OTP
+                var otp = new Random().Next(100000, 999999).ToString();
+                user.VerificationCode = otp;
+                user.CodeExpiresAt = DateTime.UtcNow.AddMinutes(_emailConfiguration.ExpirationMinutes);
+
+                var updateResult = await _userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    return Error.Failure("auth.otp.generation.failed", "فشل إنشاء كود التحقق.");
+                }
+
+                var userName = !string.IsNullOrWhiteSpace(user.FullName)
+                ? user.FullName
+                : request.Email.Split('@')[0];
+
+                // Send OTP via email (uses ExpirationMinutes from appsettings)
+                await _emailSender.SendOtpEmailAsync(
+                    request.Email,
+                    userName,
+                    otp);
+
+                return Result.Success;
+            }
+            catch (Exception ex)
+            {
+                return Error.Failure("auth.otp.send.failed", $"فشل إرسال كود التحقق: {ex.Message}");
+            }
+        }
+    }
+}

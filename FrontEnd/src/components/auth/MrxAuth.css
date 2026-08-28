@@ -1,0 +1,343 @@
+/* 
+  MrxAuth.css 
+  Refined "Dark Luxury" Aesthetic 
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --mrx-bg-deep: #0B0A09;
+  --mrx-bg-surface: #151311;
+  --mrx-bg-elevated: #1a1816;
+  
+  --mrx-text-primary: #f5f2eb;
+  --mrx-text-muted: #a39c93;
+  
+  --mrx-accent-gold: #c2a370;
+  --mrx-accent-gold-hover: #d6b885;
+  --mrx-accent-gold-dim: rgba(194, 163, 112, 0.2);
+  
+  --mrx-border-color: rgba(194, 163, 112, 0.15);
+  --mrx-border-radius: 12px;
+  --mrx-border-radius-sm: 8px;
+  
+  --mrx-error: #e85f5f;
+  --mrx-error-bg: rgba(232, 95, 95, 0.1);
+  
+  --font-serif: 'Playfair Display', serif;
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+body {
+  margin: 0;
+  background-color: var(--mrx-bg-deep);
+}
+
+.mrx-auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--mrx-bg-deep);
+  /* Optional: subtle radial gradient for depth */
+  background: radial-gradient(circle at 50% 0%, #1e1a16 0%, var(--mrx-bg-deep) 60%);
+  color: var(--mrx-text-primary);
+  font-family: var(--font-sans);
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.mrx-auth-card {
+  width: 100%;
+  max-width: 440px;
+  background-color: rgba(21, 19, 17, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 3rem 2.5rem;
+  border-radius: var(--mrx-border-radius);
+  border: 1px solid var(--mrx-border-color);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.mrx-auth-header {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.mrx-auth-title {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 500;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: var(--mrx-accent-gold);
+  text-shadow: 0 2px 10px rgba(194, 163, 112, 0.1);
+}
+
+.mrx-auth-subtitle {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  color: var(--mrx-text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Forms & Inputs */
+.mrx-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.mrx-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--mrx-text-muted);
+  padding-left: 0.25rem;
+}
+
+.mrx-input {
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--mrx-border-color);
+  color: var(--mrx-text-primary);
+  padding: 1rem 1.25rem;
+  font-size: 1rem;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: all 0.3s ease;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: var(--mrx-border-radius-sm);
+}
+
+.mrx-input:focus {
+  border-color: var(--mrx-accent-gold);
+  background-color: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 3px var(--mrx-accent-gold-dim);
+}
+
+.mrx-input::placeholder {
+  color: rgba(163, 156, 147, 0.3);
+}
+
+.mrx-input--error {
+  border-color: var(--mrx-error);
+}
+.mrx-input--error:focus {
+  border-color: var(--mrx-error);
+  box-shadow: 0 0 0 3px rgba(232, 95, 95, 0.15);
+}
+
+.mrx-error-text {
+  color: var(--mrx-error);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  padding-left: 0.25rem;
+}
+
+/* Buttons */
+.mrx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  border-radius: var(--mrx-border-radius-sm);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+
+.mrx-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mrx-btn-primary {
+  background-color: var(--mrx-accent-gold);
+  color: var(--mrx-bg-deep);
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(194, 163, 112, 0.15);
+}
+
+.mrx-btn-primary:hover:not(:disabled) {
+  background-color: var(--mrx-accent-gold-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(194, 163, 112, 0.25);
+}
+
+.mrx-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.mrx-btn-google {
+  background-color: rgba(255, 255, 255, 0.03);
+  color: var(--mrx-text-primary);
+  border: 1px solid var(--mrx-border-color);
+}
+
+.mrx-btn-google:hover {
+  border-color: var(--mrx-accent-gold);
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Error Alert Box */
+.mrx-error-alert {
+  background-color: var(--mrx-error-bg);
+  border: 1px solid rgba(232, 95, 95, 0.3);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #ffb4ab;
+  border-radius: var(--mrx-border-radius-sm);
+  text-align: left;
+}
+
+.mrx-error-alert svg {
+  color: #ffb4ab;
+  flex-shrink: 0;
+}
+
+/* Divider */
+.mrx-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 0.5rem 0;
+  color: var(--mrx-text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.mrx-divider::before,
+.mrx-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--mrx-border-color);
+}
+
+.mrx-divider:not(:empty)::before {
+  margin-right: 1rem;
+}
+
+.mrx-divider:not(:empty)::after {
+  margin-left: 1rem;
+}
+
+/* OTP Specifics */
+.mrx-otp-container {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.mrx-otp-input {
+  width: 3.5rem;
+  height: 4rem;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--mrx-border-color);
+  color: var(--mrx-accent-gold);
+  outline: none;
+  transition: all 0.3s ease;
+  border-radius: var(--mrx-border-radius-sm);
+}
+
+.mrx-otp-input:focus {
+  border-color: var(--mrx-accent-gold);
+  background-color: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 3px var(--mrx-accent-gold-dim);
+}
+
+.mrx-otp-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  color: var(--mrx-text-muted);
+  font-family: var(--font-mono);
+  padding: 0 0.25rem;
+}
+
+.mrx-btn-text {
+  background: none;
+  border: none;
+  color: var(--mrx-accent-gold);
+  font-family: var(--font-mono);
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.75rem;
+  text-decoration: none;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: color 0.2s ease;
+}
+
+.mrx-btn-text:hover:not(:disabled) {
+  color: var(--mrx-accent-gold-hover);
+}
+
+.mrx-btn-text:disabled {
+  color: var(--mrx-text-muted);
+  cursor: not-allowed;
+}
+
+/* Loading Spinner */
+.mrx-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-left-color: currentColor;
+  border-radius: 50%;
+  animation: mrx-spin 1s linear infinite;
+}
+
+.mrx-spinner-large {
+  width: 48px;
+  height: 48px;
+  border-width: 3px;
+  border-color: var(--mrx-border-color);
+  border-left-color: var(--mrx-accent-gold);
+}
+
+@keyframes mrx-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Callbacks */
+.mrx-callback-card {
+  text-align: center;
+  padding: 4rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  background-color: rgba(21, 19, 17, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--mrx-border-radius);
+  border: 1px solid var(--mrx-border-color);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+}

@@ -1,0 +1,55 @@
+==================================================
+VPS DEPLOYMENT & DNS INSTRUCTIONS
+==================================================
+
+--------------------------------------------------
+PART 1: DNS CONFIGURATION
+--------------------------------------------------
+Go to your domain provider (where you manage barber.devs.surf) and create/update the DNS record with these exact details:
+
+- TYPE: A
+- NAME: @
+- CONTENT: <Enter the Public IP Address of your VPS here (e.g. 157.23.45.101)>
+- TTL: 3600
+
+Note: If your dashboard is managing the root "devs.surf" domain, you might need to put "barber" in the NAME field instead of "@". If the dashboard is specifically for "barber.devs.surf", then use "@". 
+
+--------------------------------------------------
+PART 2: THE 5 STEPS TO DEPLOY ON VPS
+--------------------------------------------------
+Once your DNS is pointing to your VPS, log into your VPS terminal and follow these steps:
+
+STEP 1: GET YOUR CODE ON THE VPS
+Push your code to a Git repository (like GitHub/GitLab) and pull it onto your VPS, or upload the files directly via SFTP. Navigate into the project folder.
+
+STEP 2: CREATE THE .ENV FILE
+Run this command to copy the example configuration:
+cp .env.example .env
+
+STEP 3: ADD YOUR REAL SECRETS
+Open the `.env` file you just created and fill in your real, secure passwords. Make sure to update:
+- DB_PASSWORD
+- ConnectionStrings__DefaultConnection (update the password here too)
+- JWT__Key
+- Email__SenderPassword
+- Authentication__Google__ClientId
+- Authentication__Google__ClientSecret
+- CERTBOT_EMAIL
+
+STEP 4: PROVISION SSL CERTIFICATES
+Run the Let's Encrypt initialization script to get your HTTPS certificates.
+
+IF YOUR VPS IS LINUX (Most Common):
+Run these two commands in the terminal:
+chmod +x init-letsencrypt.sh
+./init-letsencrypt.sh
+
+IF YOUR VPS IS WINDOWS SERVER:
+Run this command in PowerShell:
+.\init-letsencrypt.ps1
+
+STEP 5: START THE FULL PROJECT
+Once the certificates are generated, start all the containers in the background:
+docker compose up -d --build
+
+Done! Your website is now live at https://barber.devs.surf.

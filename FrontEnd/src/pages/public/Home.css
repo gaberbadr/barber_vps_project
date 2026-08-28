@@ -1,0 +1,1118 @@
+/* MR.X — Full-Screen Cinematic Barber Panels */
+
+:root {
+  --mrx-bg: #0B0A09;
+  --mrx-gold: #C9A96E;
+  --mrx-gold-dark: #A67C45;
+  --mrx-text-main: #F5F0E8;
+  --mrx-text-muted: #8A7E72;
+  --mrx-border: rgba(255, 255, 255, 0.08);
+
+  --mrx-light-bg: #FBF9F5;
+  --mrx-light-surface: #F3EFEA;
+  --mrx-light-border: #EAE5DC;
+  --mrx-light-text: #181512;
+  --mrx-light-muted: #4A443F;
+
+  --font-serif: var(--font-heading, 'Cairo', 'Playfair Display', serif);
+  --font-sans: var(--font-body, 'Tajawal', 'Inter', sans-serif);
+}
+
+.home-page {
+  background-color: var(--mrx-bg);
+  color: var(--mrx-text-main);
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* ==========================================================================
+   HERO — FULL-SCREEN 100VH
+   ========================================================================== */
+.mrx-hero-fullscreen {
+  position: relative;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 100px 40px 20px;
+  overflow: visible;
+}
+
+/* Barbershop Background */
+.mrx-hero-fullscreen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom,
+      rgba(11, 10, 9, 0.70) 0%,
+      rgba(11, 10, 9, 0.45) 30%,
+      rgba(11, 10, 9, 0.72) 65%,
+      rgba(11, 10, 9, 0.98) 100%),
+    url('https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=1920&q=80') center / cover no-repeat;
+  z-index: 0;
+}
+
+/* Warm amber vignette */
+.mrx-hero-fullscreen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%, rgba(201, 169, 110, 0.10) 0%, transparent 60%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.mrx-hero-fullscreen>* {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── CENTERED TOP HEADER ── */
+.hero-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex-shrink: 0;
+  animation: fadeInDown 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.hero-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: var(--mrx-gold);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.hero-headline {
+  font-family: var(--font-serif);
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--mrx-text-main);
+  margin: 0;
+}
+
+/* ── CARDS STAGE ── */
+.hero-cards-stage {
+  flex: 1;
+  width: 100%;
+  max-width: 1300px;
+  display: flex;
+  align-items: stretch;
+  overflow: visible;
+  /* allow chair SVG to breathe */
+  margin: 20px 0 0;
+  min-height: 0;
+}
+
+.hero-loading {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-top-color: var(--mrx-gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── CARDS ROW ── */
+.hero-cards-row {
+  display: flex;
+  gap: 28px;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+  align-items: stretch;
+}
+
+/* ── CARD SEAT WRAPPER (card + chair together) ── */
+.barber-card-seat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  flex-shrink: 1;
+  height: 100%;
+
+  opacity: 0;
+  animation: cardEntrance 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.barber-card {
+  position: relative;
+  /* Dynamic height: fills viewport minus header/footer space */
+  height: calc(100vh - 300px);
+  max-height: 650px;
+  min-height: 320px;
+
+  /* Width adjusts automatically based on aspect ratio */
+  width: auto;
+  aspect-ratio: 2 / 3;
+
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: pointer;
+
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+
+  transition:
+    transform 0.5s cubic-bezier(0.2, 1, 0.3, 1),
+    box-shadow 0.5s cubic-bezier(0.2, 1, 0.3, 1),
+    border-color 0.4s ease;
+}
+
+.barber-card:hover {
+  transform: translateY(-12px) scale(1.025);
+  box-shadow:
+    0 40px 80px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(201, 169, 110, 0.35);
+  border-color: rgba(201, 169, 110, 0.3);
+}
+
+/* Lift the whole seat on hover */
+.barber-card-seat:hover .barber-card {
+  transform: translateY(-12px) scale(1.025);
+  box-shadow:
+    0 40px 80px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(201, 169, 110, 0.35);
+  border-color: rgba(201, 169, 110, 0.3);
+}
+
+/* ── BARBER CHAIR ── */
+.barber-chair-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: -4px;
+  flex-shrink: 0;
+  /* never compress the chair */
+  height: 110px;
+  /* fixed chair zone height */
+  align-items: flex-start;
+}
+
+.barber-chair-svg {
+  width: 90%;
+  max-width: 200px;
+  height: 110px;
+  display: block;
+  filter:
+    drop-shadow(0 6px 18px rgba(0, 0, 0, 0.65)) drop-shadow(0 0 8px rgba(201, 169, 110, 0.0));
+  transition: filter 0.45s ease;
+}
+
+.barber-card-seat:hover .barber-chair-svg {
+  filter:
+    drop-shadow(0 8px 24px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 14px rgba(201, 169, 110, 0.18));
+}
+
+@keyframes cardEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── CARD IMAGE — fills entirely ── */
+.barber-card-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+  /* show face & upper body perfectly */
+  display: block;
+  filter: brightness(0.85) saturate(0.85) contrast(1.05);
+  transition:
+    filter 0.6s cubic-bezier(0.2, 1, 0.3, 1),
+    transform 0.6s cubic-bezier(0.2, 1, 0.3, 1);
+}
+
+.barber-card:hover .barber-card-img {
+  filter: brightness(0.95) saturate(1.05) contrast(1.05);
+  transform: scale(1.04);
+}
+
+/* ── CARD INDEX NUMBER ── */
+.barber-card-number {
+  position: absolute;
+  top: 1.2rem;
+  right: 1.2rem;
+  font-family: var(--font-sans);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.4);
+  z-index: 3;
+}
+
+/* ── CINEMATIC BOTTOM OVERLAY ── */
+.barber-card-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  /* strong bottom gradient for readability */
+  background: linear-gradient(to top,
+      rgba(6, 5, 4, 0.96) 0%,
+      rgba(6, 5, 4, 0.72) 28%,
+      rgba(6, 5, 4, 0.25) 55%,
+      transparent 80%);
+  transition: background 0.4s ease;
+  z-index: 2;
+}
+
+.barber-card:hover .barber-card-overlay {
+  background: linear-gradient(to top,
+      rgba(6, 5, 4, 0.98) 0%,
+      rgba(6, 5, 4, 0.82) 32%,
+      rgba(6, 5, 4, 0.30) 58%,
+      transparent 80%);
+}
+
+.barber-card-content {
+  padding: 1.2rem 1.4rem 1.6rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── Status ── */
+.barber-status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-sans);
+  font-size: 0.66rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+
+.status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #10B981;
+  flex-shrink: 0;
+  animation: pulseGreen 2s infinite;
+}
+
+@keyframes pulseGreen {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+  }
+
+  70% {
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.barber-name {
+  font-family: var(--font-serif);
+  font-size: clamp(1.1rem, 1.6vw, 1.45rem);
+  font-weight: 500;
+  color: #FFFFFF;
+  margin: 0;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.barber-role {
+  font-family: var(--font-sans);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--mrx-gold);
+  text-transform: uppercase;
+  margin: 2px 0 10px;
+}
+
+/* ── Book Button ── */
+.btn-book-card {
+  background: rgba(201, 169, 110, 0.15);
+  color: var(--mrx-gold);
+  border: 1px solid rgba(201, 169, 110, 0.4);
+  padding: 0.6rem 1.3rem;
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  border-radius: 50px;
+  text-transform: uppercase;
+  align-self: flex-start;
+  white-space: nowrap;
+  backdrop-filter: blur(6px);
+
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.barber-card:hover .btn-book-card {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.btn-book-card:hover {
+  background: var(--mrx-gold);
+  color: #0B0A09;
+  border-color: var(--mrx-gold);
+  box-shadow: 0 6px 20px rgba(201, 169, 110, 0.4);
+}
+
+/* ── BOTTOM BAR (centered) ── */
+.hero-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  animation: fadeInUp 0.8s 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.btn-browse-all {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 0.7rem 2.2rem;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  border-radius: 50px;
+  text-transform: uppercase;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-browse-all:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.38);
+  color: #FFFFFF;
+}
+
+/* ==========================================================================
+   SHARED BUTTON
+   ========================================================================== */
+.btn-primary-pill {
+  background-color: var(--mrx-gold);
+  color: #0B0A09;
+  border: 1px solid var(--mrx-gold);
+  padding: 1.1rem 2.8rem;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  border-radius: 50px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  text-transform: uppercase;
+}
+
+.btn-primary-pill:hover {
+  background-color: var(--mrx-gold-dark);
+  border-color: var(--mrx-gold-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(201, 169, 110, 0.3);
+}
+
+/* ==========================================================================
+   THE RITUALS — LIGHT
+   ========================================================================== */
+.mrx-rituals {
+  padding: 120px 3rem;
+  background-color: var(--mrx-light-bg);
+}
+
+.rituals-content {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.editorial-header {
+  margin-bottom: 4rem;
+}
+
+.section-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.title-muted {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: var(--mrx-gold-dark);
+  text-transform: uppercase;
+}
+
+.title-highlight {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
+  color: var(--mrx-light-text);
+  letter-spacing: -0.02em;
+}
+
+.menu-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 5rem;
+}
+
+.menu-item {
+  padding: 1.3rem 1rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  margin-bottom: 0.4rem;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.menu-item:hover {
+  background: var(--mrx-light-surface);
+  border-color: var(--mrx-light-border);
+  transform: translateX(5px);
+}
+
+.menu-item-top {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.menu-item-name {
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: var(--mrx-light-text);
+  margin: 0;
+  white-space: nowrap;
+  transition: color 0.3s ease;
+}
+
+.menu-item:hover .menu-item-name {
+  color: var(--mrx-gold-dark);
+}
+
+.menu-item-dots {
+  flex-grow: 1;
+  border-bottom: 1px dotted var(--mrx-light-border);
+  min-width: 20px;
+  margin-bottom: 3px;
+}
+
+.menu-item-price {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--mrx-gold-dark);
+  white-space: nowrap;
+}
+
+.menu-item-desc {
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  color: var(--mrx-light-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ==========================================================================
+   CTA — DARK
+   ========================================================================== */
+.mrx-cta {
+  padding: 120px 3rem;
+  text-align: center;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-color: var(--mrx-bg);
+}
+
+.mrx-cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    rgba(8, 7, 6, 0.93),
+    url('https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=1920&q=80') center / cover no-repeat;
+  z-index: -1;
+}
+
+.cta-content {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* Gold hairline rule */
+.cta-content::before {
+  content: '';
+  display: block;
+  width: 44px;
+  height: 1px;
+  background: var(--mrx-gold);
+  margin: 0 auto 2rem;
+}
+
+.cta-heading {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 400;
+  color: var(--mrx-text-main);
+  margin-bottom: 2.5rem;
+  letter-spacing: -0.01em;
+}
+
+.cta-btn-large {
+  font-size: 0.92rem;
+  padding: 1.25rem 3.5rem;
+}
+
+/* ==========================================================================
+   UTILITY
+   ========================================================================== */
+.loading-dots {
+  text-align: center;
+  padding: 3rem;
+  color: var(--mrx-gold);
+  font-family: var(--font-sans);
+  letter-spacing: 2px;
+  font-size: 0.85rem;
+}
+
+.text-center {
+  text-align: center;
+}
+
+/* ==========================================================================
+   KEYFRAMES
+   ========================================================================== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   SERVICES CARD GRID (mobile-first upgrade)
+   ========================================================================== */
+/* hidden on desktop — marquee only on mobile */
+.menu-cards-grid {
+  display: none;
+}
+
+/* ── Infinite Marquee ── */
+.menu-cards-marquee {
+  display: none;
+  /* shown only on mobile via media query */
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  width: 100%;
+  position: relative;
+  /* fade edges */
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+}
+
+.menu-cards-marquee::-webkit-scrollbar {
+  display: none;
+}
+
+.menu-cards-track {
+  display: flex;
+  gap: 12px;
+  width: max-content;
+}
+
+
+.menu-card {
+  background: var(--mrx-light-surface);
+  border: 1px solid var(--mrx-light-border);
+  border-radius: 16px;
+  padding: 1.4rem 1.2rem 1.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.3s ease;
+  cursor: default;
+}
+
+.menu-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(201, 169, 110, 0.06) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.menu-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.1);
+  border-color: rgba(166, 124, 69, 0.3);
+}
+
+.menu-card:hover::before {
+  opacity: 1;
+}
+
+.menu-card-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.menu-card-name {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--mrx-light-text);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.menu-card-desc {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  color: var(--mrx-light-muted);
+  line-height: 1.5;
+  margin: 0;
+  flex: 1;
+}
+
+.menu-card-price {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(166, 124, 69, 0.12);
+  color: var(--mrx-gold-dark);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.3rem 0.7rem;
+  border-radius: 50px;
+  border: 1px solid rgba(166, 124, 69, 0.2);
+  align-self: flex-start;
+  margin-top: auto;
+  letter-spacing: 0.02em;
+}
+
+/* Mobile scroll indicator dots */
+.hero-scroll-indicator {
+  display: none;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 4px 0;
+}
+
+.hero-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  transition: all 0.3s ease;
+}
+
+.hero-dot.active {
+  background: var(--mrx-gold);
+  width: 18px;
+  border-radius: 3px;
+}
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+
+/* ── TABLET (1024px and below) ── */
+@media (max-width: 1023px) {
+  .mrx-hero-fullscreen {
+    padding: 88px 20px 22px;
+  }
+
+  .hero-cards-stage {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 16px 0 14px;
+  }
+
+  .hero-cards-stage::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hero-cards-row {
+    width: max-content;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-items: flex-end;
+    gap: 20px;
+  }
+
+  .barber-card-seat {
+    min-width: 220px;
+    max-width: 220px;
+    flex-shrink: 0;
+    scroll-snap-align: center;
+  }
+
+  /* Always show book button on touch devices */
+  .btn-book-card {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .menu-columns {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .mrx-rituals {
+    padding: 90px 2rem;
+  }
+
+  .mrx-cta {
+    padding: 90px 2rem;
+  }
+}
+
+/* ── LARGE MOBILE / SMALL TABLET (768px and below) ── */
+@media (max-width: 768px) {
+
+  /* ─── HERO: Full-width swipeable cards ─── */
+  .mrx-hero-fullscreen {
+    padding: 80px 0 16px;
+    height: 100svh;
+    justify-content: flex-start;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  .hero-top {
+    padding: 0 20px;
+    margin-top: 10px;
+    margin-bottom: 12px;
+    gap: 4px;
+  }
+
+  .hero-eyebrow {
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    font-weight: 700;
+  }
+
+  .hero-headline {
+    font-size: clamp(2.6rem, 11vw, 3.5rem);
+    font-weight: 700;
+  }
+
+  /* Stage: centered snap carousel */
+  .hero-cards-stage {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: calc(50% - (42.5vw - 7px));
+    /* center each card */
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0;
+    width: 100%;
+    padding: 0;
+    /* no side padding — row handles centering offset */
+    box-sizing: border-box;
+  }
+
+  .hero-cards-stage::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hero-cards-row {
+    width: max-content;
+    flex-wrap: nowrap;
+    gap: 16px;
+    align-items: stretch;
+    height: 100%;
+    /* side padding = (100vw - card_width) / 2 so first & last card center */
+    padding: 0 calc(7.5vw + 4px);
+  }
+
+  /* Cards: tall portrait, nearly full screen width */
+  .barber-card-seat {
+    min-width: calc(85vw - 24px);
+    max-width: calc(85vw - 24px);
+    height: 100%;
+    flex-shrink: 0;
+    scroll-snap-align: center;
+    /* hide chair on mobile — save vertical space */
+  }
+
+  .barber-card {
+    aspect-ratio: unset;
+    width: 100%;
+    height: calc(100% - 0px);
+    border-radius: 22px;
+  }
+
+  /* Hide the barber chair SVG on mobile */
+  .barber-chair-wrap {
+    display: none;
+  }
+
+  /* Book btn always visible */
+  .btn-book-card {
+    opacity: 1;
+    transform: translateY(0);
+    font-size: 0.72rem;
+    padding: 0.7rem 1.4rem;
+  }
+
+  .barber-card-content {
+    padding: 1.2rem 1.4rem 1.8rem;
+  }
+
+  .barber-name {
+    font-size: 1.3rem;
+  }
+
+  .barber-role {
+    font-size: 0.62rem;
+  }
+
+  /* Scroll indicator dots */
+  .hero-scroll-indicator {
+    display: flex;
+    margin-top: 10px;
+    flex-shrink: 0;
+    padding-bottom: 4px;
+  }
+
+  .hero-bottom {
+    padding-bottom: 0;
+    margin-top: 6px;
+  }
+
+  .btn-browse-all {
+    padding: 0.6rem 1.6rem;
+    font-size: 0.72rem;
+  }
+
+  /* ─── SERVICES: Infinite marquee ─── */
+  .mrx-rituals {
+    padding: 72px 0 80px;
+  }
+
+  .rituals-content {
+    padding: 0 1.2rem;
+  }
+
+  /* keep title indented */
+  .menu-cards-marquee {
+    margin: 0 -1.2rem;
+  }
+
+  /* but marquee goes full-bleed */
+
+  /* Hide desktop list, show marquee */
+  .menu-columns {
+    display: none;
+  }
+
+  .menu-cards-marquee {
+    display: block;
+  }
+
+  /* Each card: fixed width for horizontal scroll */
+  .menu-card {
+    width: 160px;
+    flex-shrink: 0;
+    padding: 1.1rem 1rem 1.3rem;
+    border-radius: 14px;
+  }
+
+  .title-highlight {
+    font-size: clamp(1.7rem, 6vw, 2.2rem);
+  }
+
+  .editorial-header {
+    margin-bottom: 2.5rem;
+  }
+
+  /* ─── CTA ─── */
+  .mrx-cta {
+    padding: 80px 1.4rem;
+  }
+
+  .cta-heading {
+    font-size: clamp(1.6rem, 6vw, 2.4rem);
+  }
+
+  .cta-btn-large {
+    padding: 1rem 2.4rem;
+    font-size: 0.84rem;
+  }
+}
+
+/* ── SMALL MOBILE (480px and below) ── */
+@media (max-width: 480px) {
+  .mrx-hero-fullscreen {
+    padding: 68px 0 12px;
+  }
+
+  .hero-eyebrow {
+    font-size: 0.58rem;
+    letter-spacing: 0.18em;
+  }
+
+  .hero-headline {
+    font-size: clamp(1.45rem, 7vw, 1.9rem);
+  }
+
+  .barber-card-seat {
+    min-width: calc(90vw - 20px);
+    max-width: calc(90vw - 20px);
+  }
+
+  .barber-card {
+    border-radius: 18px;
+  }
+
+  .barber-name {
+    font-size: 1.15rem;
+  }
+
+  /* Full bleed marquee adjustments for small mobile */
+  .mrx-rituals {
+    padding: 60px 0 72px;
+  }
+
+  .rituals-content {
+    padding: 0 1rem;
+  }
+
+  .menu-cards-marquee {
+    margin: 0 -1rem;
+  }
+
+  .menu-card {
+    padding: 1.1rem 1rem 1.3rem;
+    border-radius: 14px;
+    width: 140px;
+  }
+
+  .menu-card-name {
+    font-size: 0.92rem;
+  }
+
+  .menu-card-price {
+    font-size: 0.78rem;
+    padding: 0.25rem 0.6rem;
+  }
+
+  .title-highlight {
+    font-size: clamp(1.5rem, 7vw, 1.9rem);
+  }
+
+  .mrx-cta {
+    padding: 70px 1rem;
+  }
+
+  .cta-heading {
+    font-size: clamp(1.4rem, 7vw, 1.9rem);
+  }
+
+  .btn-primary-pill {
+    padding: 0.9rem 2rem;
+    font-size: 0.82rem;
+  }
+
+  .cta-btn-large {
+    padding: 0.9rem 2rem;
+    font-size: 0.82rem;
+  }
+}
+
+/* ── VERY SMALL MOBILE (360px and below) ── */
+@media (max-width: 360px) {
+  .barber-card-seat {
+    min-width: calc(92vw - 16px);
+    max-width: calc(92vw - 16px);
+  }
+
+  .hero-headline {
+    font-size: 1.4rem;
+  }
+
+  .barber-name {
+    font-size: 1rem;
+  }
+
+  .btn-browse-all {
+    padding: 0.55rem 1.3rem;
+    font-size: 0.68rem;
+  }
+}
