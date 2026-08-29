@@ -12,13 +12,9 @@ $staging = 0 # Set to 1 if you're testing your setup to avoid hitting request li
 
 $data_path = "./certbot"
 
-if (-not (Test-Path "$data_path/conf/live/$domains")) {
-    Write-Host "### Creating dummy certificate for $domains ..."
-    New-Item -ItemType Directory -Force -Path "$data_path/conf/live/$domains" | Out-Null
-    
-    docker compose run --rm --entrypoint "openssl req -x509 -nodes -newkey rsa:4096 -days 1 -keyout '/etc/letsencrypt/live/$domains/privkey.pem' -out '/etc/letsencrypt/live/$domains/fullchain.pem' -subj '/CN=localhost'" certbot
-    Write-Host ""
-}
+Write-Host "### Creating dummy certificate for $domains ..."
+docker compose run --rm --entrypoint "sh -c `"mkdir -p /etc/letsencrypt/live/$domains && openssl req -x509 -nodes -newkey rsa:4096 -days 1 -keyout /etc/letsencrypt/live/$domains/privkey.pem -out /etc/letsencrypt/live/$domains/fullchain.pem -subj '/CN=localhost'`"" certbot
+Write-Host ""
 
 Write-Host "### Starting nginx ..."
 docker compose up --force-recreate -d nginx

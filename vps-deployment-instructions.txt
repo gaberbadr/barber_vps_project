@@ -31,7 +31,7 @@ Open the `.env` file you just created and fill in your real, secure passwords. M
 - DB_PASSWORD
 - ConnectionStrings__DefaultConnection (update the password here too)
 - JWT__Key
-- Email__SenderPassword
+- Email__SmtpPassword
 - Authentication__Google__ClientId
 - Authentication__Google__ClientSecret
 - CERTBOT_EMAIL

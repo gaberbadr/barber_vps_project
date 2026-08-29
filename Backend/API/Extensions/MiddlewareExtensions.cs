@@ -23,6 +23,17 @@ namespace API.Extensions
                 app.UseExceptionHandler("/error");
             }
 
+            // Configure Forwarded Headers to parse X-Forwarded-For and X-Forwarded-Proto from Nginx
+            var forwardedHeadersOptions = new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | 
+                                   Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+            };
+            // Clear known networks/proxies so it trusts the Docker network proxy (Nginx)
+            forwardedHeadersOptions.KnownNetworks.Clear();
+            forwardedHeadersOptions.KnownProxies.Clear();
+            app.UseForwardedHeaders(forwardedHeadersOptions);
+
             app.UseHttpsRedirection();
             
             // Security headers for production
