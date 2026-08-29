@@ -16,7 +16,7 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.Property(la => la.AttemptedAt)
                 .IsRequired()
-                .HasDefaultValueSql("SYSUTCDATETIME()");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP AT TIME ZONE 'UTC'");
 
             builder.Property(la => la.IpAddress)
                 .IsRequired()

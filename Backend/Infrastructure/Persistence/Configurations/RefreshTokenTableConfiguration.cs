@@ -26,7 +26,7 @@ namespace Zero.Infrastructure.Persistence.Configurations
                 .HasMaxLength(50);
 
             builder.Property(rt => rt.CreatedAt)
-                .HasDefaultValueSql("SYSUTCDATETIME()");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP AT TIME ZONE 'UTC'");
 
             // Relationships
             builder.HasOne(rt => rt.User)

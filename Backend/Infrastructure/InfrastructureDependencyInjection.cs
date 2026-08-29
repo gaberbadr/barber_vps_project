@@ -63,7 +63,7 @@ namespace Infrastructure
 
             services.AddDbContext<ApplicationDbContext>(options =>
             {
-                options.UseSqlServer(connectionString);
+                options.UseNpgsql(connectionString);
             });
         }
 

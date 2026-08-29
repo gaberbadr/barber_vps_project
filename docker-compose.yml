@@ -45,25 +45,24 @@ services:
     restart: unless-stopped
 
   db:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: barber-sql
+    image: postgres:16-alpine
+    container_name: barber-postgres
     expose:
-      - "1433"
+      - "5432"
     environment:
-      SA_PASSWORD: "${DB_PASSWORD}"
-      ACCEPT_EULA: "Y"
-      MSSQL_PID: "Express"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+      POSTGRES_DB: project1
     volumes:
-      - sql_data:/var/opt/mssql
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - barber-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-C", "-S", "localhost", "-U", "sa", "-P", "${DB_PASSWORD}", "-Q", "SELECT 1"]
-      interval: 15s
+      test: ["CMD-SHELL", "pg_isready -U postgres -d project1"]
+      interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
 
   redis:
     image: redis:alpine
@@ -114,7 +113,7 @@ services:
     restart: unless-stopped
 
 volumes:
-  sql_data:
+  postgres_data:
   api_files:
   redis_data:
   certbot_www:
