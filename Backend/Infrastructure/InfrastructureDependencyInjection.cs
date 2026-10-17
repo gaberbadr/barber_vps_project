@@ -114,7 +114,7 @@ namespace Infrastructure
             // RateLimitService and RedisCacheService will handle gracefully with in-memory fallback
             if (!redisOptions.Enabled)
             {
-                services.AddSingleton<IConnectionMultiplexer?>(sp => null);
+                services.AddSingleton<IConnectionMultiplexer>(sp => null!);
                 services.AddSingleton<ICacheService, RedisCacheService>();
                 services.AddSingleton<IRateLimitService, RateLimitService>();
                 return;
@@ -127,14 +127,14 @@ namespace Infrastructure
             {
                 // Log warning but don't crash - allow in-memory fallback
                 // This ensures Production doesn't become unavailable due to missing Redis URL
-                services.AddSingleton<IConnectionMultiplexer?>(sp =>
+                services.AddSingleton<IConnectionMultiplexer>(sp =>
                 {
                     var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("Redis.Configuration");
                     logger.LogWarning(
                         "Redis is enabled in configuration but ConnectionStrings:REDIS_URL is not configured. " +
                         "Rate limiting and caching will use in-memory fallback. " +
                         "This is not recommended for production environments with multiple instances.");
-                    return null;
+                    return null!;
                 });
 
                 services.AddSingleton<ICacheService, RedisCacheService>();
@@ -143,7 +143,7 @@ namespace Infrastructure
             }
 
             // Redis connection string is configured - attempt connection
-            services.AddSingleton<IConnectionMultiplexer?>(sp =>
+            services.AddSingleton<IConnectionMultiplexer>(sp =>
             {
                 try
                 {
@@ -209,7 +209,7 @@ namespace Infrastructure
                         "Rate limiting and caching will fall back to in-memory storage. " +
                         "This is not recommended for production environments with multiple instances.");
                     
-                    return null;
+                    return null!;
                 }
                 catch (Exception ex)
                 {
@@ -221,7 +221,7 @@ namespace Infrastructure
                         "Check your ConnectionStrings:REDIS_URL configuration. " +
                         "This is not recommended for production environments with multiple instances.");
                     
-                    return null;
+                    return null!;
                 }
             });
 

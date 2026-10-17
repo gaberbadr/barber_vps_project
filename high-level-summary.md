@@ -29,6 +29,7 @@ When a user visits `https://barber.devs.surf`:
 4. Nginx inspects the route:
    - If the request is for `/` or frontend pages, Nginx proxies it to the Frontend container.
    - If the request starts with `/api/`, Nginx proxies it to `http://backend:8080/api/`.
+   - If the request starts with `/signin-google`, Nginx proxies it to `http://backend:8080/signin-google` (Google OAuth callback).
    - If the request starts with `/files/`, Nginx proxies it to `http://backend:8080/files/`.
    - If the request starts with `/swagger/`, Nginx proxies it to `http://backend:8080/swagger/`.
    - If the request is `/health`, Nginx proxies it to `http://backend:8080/health`.
