@@ -56,24 +56,23 @@ namespace Application.Features.Auth.Commands.SendOTP
                     return Error.Failure("auth.user.blocked", "حسابك موقوف. يرجى التواصل مع الدعم.");
                 }
 
-                // Rate-limiting / cooldown check:
-                // Only throttle if a verification code was already requested within the last 60 seconds
-                if (user.UpdatedAt != null && user.CodeExpiresAt != null && user.CodeExpiresAt > DateTime.UtcNow)
+                // Check if user already has an active, unexpired verification code
+                if (user.CodeExpiresAt != null && user.CodeExpiresAt > DateTime.UtcNow && !string.IsNullOrWhiteSpace(user.VerificationCode))
                 {
-                    var secondsSinceLastRequest = (DateTime.UtcNow - user.UpdatedAt.Value).TotalSeconds;
-                    if (secondsSinceLastRequest >= 0 && secondsSinceLastRequest < 60)
-                    {
-                        var remainingSeconds = Math.Max(1, (int)Math.Ceiling(60 - secondsSinceLastRequest));
-                        _logger.LogWarning("Throttled OTP request for email {EmailMasked}. Must wait {Remaining}s", MaskEmail(request.Email), remainingSeconds);
-                        return Error.Conflict("auth.otp.cooldown", $"يرجى الانتظار {remainingSeconds} ثانية قبل طلب كود جديد.");
-                    }
+                    var remaining = user.CodeExpiresAt.Value - DateTime.UtcNow;
+                    var remainingFormatted = FormatRemainingTime(remaining);
+                    _logger.LogInformation("Active OTP exists for email {EmailMasked}. Valid for {Remaining}. Suppressing new email.", MaskEmail(request.Email), remainingFormatted);
+
+                    return Error.Conflict(
+                        "auth.otp.active_code_exists",
+                        $"لديك بالفعل كود تحقق نشط تم إرساله إلى بريدك. يرجى مراجعة رسائلك واستخدامه، أو الانتظار {remainingFormatted} قبل طلب كود جديد.");
                 }
 
-                // Generate 6-digit OTP with a realistic 5-minute expiry window (preventing accidental 12-hour lockout)
+                // Generate 6-digit OTP with configured expiry window (default 360 minutes = 6 hours)
                 var otp = new Random().Next(100000, 999999).ToString();
-                var validMinutes = _emailConfiguration.ExpirationMinutes > 0 && _emailConfiguration.ExpirationMinutes <= 15
+                var validMinutes = _emailConfiguration.ExpirationMinutes > 0
                     ? _emailConfiguration.ExpirationMinutes
-                    : 5;
+                    : 360; // 6 hours
                 user.SetVerificationCode(otp, DateTime.UtcNow.AddMinutes(validMinutes));
 
                 var updateResult = await _userManager.UpdateAsync(user);
@@ -128,6 +127,51 @@ namespace Application.Features.Auth.Commands.SendOTP
             var atIndex = email.IndexOf('@');
             if (atIndex <= 1) return "***" + email[atIndex..];
             return string.Concat(email.AsSpan(0, 1), "***", email.AsSpan(atIndex));
+        }
+
+        private static string FormatRemainingTime(TimeSpan remaining)
+        {
+            var hours = (int)remaining.TotalHours;
+            var minutes = remaining.Minutes;
+            var seconds = remaining.Seconds;
+
+            if (hours > 0)
+            {
+                var hourStr = hours switch
+                {
+                    1 => "ساعة واحدة",
+                    2 => "ساعتين",
+                    >= 3 and <= 10 => $"{hours} ساعات",
+                    _ => $"{hours} ساعة"
+                };
+
+                if (minutes > 0)
+                {
+                    var minStr = minutes switch
+                    {
+                        1 => "دقيقة واحدة",
+                        2 => "دقيقتين",
+                        >= 3 and <= 10 => $"{minutes} دقائق",
+                        _ => $"{minutes} دقيقة"
+                    };
+                    return $"{hourStr} و {minStr}";
+                }
+
+                return hourStr;
+            }
+
+            if (minutes > 0)
+            {
+                return minutes switch
+                {
+                    1 => "دقيقة واحدة",
+                    2 => "دقيقتين",
+                    >= 3 and <= 10 => $"{minutes} دقائق",
+                    _ => $"{minutes} دقيقة"
+                };
+            }
+
+            return $"{Math.Max(1, seconds)} ثانية";
         }
     }
 }

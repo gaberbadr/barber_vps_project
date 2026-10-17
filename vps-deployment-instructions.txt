@@ -128,19 +128,17 @@ Authentication__Google__ClientSecret=your_google_client_secret
 * Google Cloud Console Authorized Redirect URI:
   https://barber.devs.surf/signin-google
 
-# Email Configuration (SMTP / Verification Emails)
-# IMPORTANT: Blitz.cloud blocks outbound ports 25, 465, and 587 by default to prevent spam.
-# - If using Gmail SMTP on port 587, request port 587 unblock from Blitz support.
-# - Alternatively, use port 2525 (unblocked by Blitz) with an SMTP relay like Brevo (smtp-relay.brevo.com:2525).
-# - Diagnostic check: Visit /api/health/email to verify outbound TCP connectivity from the container runtime.
-Email__Host=smtp.gmail.com
-Email__Port=587
-Email__SmtpUsername=your_actual_email@gmail.com
-Email__SmtpPassword=your_app_password_without_spaces
-Email__SenderEmail=your_actual_email@gmail.com
+# Email Configuration (Brevo SMTP Relay via Port 2525)
+# IMPORTANT: Blitz.cloud blocks outbound ports 25, 465, and 587 by default.
+# Port 2525 is open and verified healthy on Blitz.cloud for Brevo.
+Email__Host=smtp-relay.brevo.com
+Email__Port=2525
+Email__SmtpUsername=bea4e6001@smtp-brevo.com
+Email__SmtpPassword=<SET_YOUR_BREVO_SMTP_KEY_IN_ENVIRONMENT_VARIABLES>
+Email__SenderEmail=gaberemadbader@gmail.com
 Email__SenderDisplayName=Barber Shop
 Email__EnableSsl=true
-Email__ExpirationMinutes=720
+Email__ExpirationMinutes=360
 
 --------------------------------------------------------------------------------
 STEP 5: CONFIGURE CUSTOM DOMAIN & HTTPS (barber.devs.surf)

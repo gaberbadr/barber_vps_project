@@ -79,6 +79,9 @@ export default function AuthPage() {
       setTimer(OTP_COOLDOWN);
     } catch (err: any) {
       setErrorMsg(parseApiError(err, 'مش قادرين نبعت كود التأكيد.'));
+      if (err?.response?.status === 409) {
+        setOtpSent(true);
+      }
     } finally {
       setLoading(false);
     }
