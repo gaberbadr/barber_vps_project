@@ -57,13 +57,31 @@ namespace Infrastructure
             IServiceCollection services,
             IConfiguration configuration)
         {
-            var rawConnectionString = configuration.GetConnectionString("DefaultConnection")
-                ?? configuration["DATABASE_URL"]
-                ?? configuration.GetConnectionString("DATABASE_URL");
+            var defaultConn = configuration.GetConnectionString("DefaultConnection");
+            var databaseUrl = configuration["DATABASE_URL"]
+                ?? configuration.GetConnectionString("DATABASE_URL")
+                ?? configuration["POSTGRES_URL"];
+
+            // Prioritize DATABASE_URL (injected by Blitz Managed PostgreSQL or configured in environment)
+            string rawConnectionString;
+            if (!string.IsNullOrWhiteSpace(databaseUrl))
+            {
+                rawConnectionString = databaseUrl;
+            }
+            else if (!string.IsNullOrWhiteSpace(defaultConn) &&
+                     !defaultConn.Contains("Host=db", StringComparison.OrdinalIgnoreCase) &&
+                     !defaultConn.Contains("Server=db", StringComparison.OrdinalIgnoreCase))
+            {
+                rawConnectionString = defaultConn;
+            }
+            else
+            {
+                rawConnectionString = defaultConn ?? string.Empty;
+            }
 
             if (string.IsNullOrWhiteSpace(rawConnectionString))
                 throw new InvalidOperationException(
-                    "DefaultConnection is not configured.");
+                    "Database connection string is not configured. Set DATABASE_URL or ConnectionStrings:DefaultConnection.");
 
             var connectionString = FormatPostgresConnectionString(rawConnectionString);
 
@@ -79,16 +97,37 @@ namespace Infrastructure
                 connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
             {
                 var uri = new Uri(connectionString);
-                var userInfo = uri.UserInfo?.Split(':');
+                var userInfo = uri.UserInfo?.Split(':', 2);
+                var username = userInfo != null && userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : "";
+                var password = userInfo != null && userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+                var database = uri.AbsolutePath.TrimStart('/');
+
                 var builder = new Npgsql.NpgsqlConnectionStringBuilder
                 {
                     Host = uri.Host,
                     Port = uri.Port > 0 ? uri.Port : 5432,
-                    Username = userInfo != null && userInfo.Length > 0 ? userInfo[0] : "",
-                    Password = userInfo != null && userInfo.Length > 1 ? userInfo[1] : "",
-                    Database = uri.AbsolutePath.TrimStart('/'),
+                    Username = username,
+                    Password = password,
+                    Database = database,
                     SslMode = Npgsql.SslMode.Prefer
                 };
+
+                if (!string.IsNullOrWhiteSpace(uri.Query))
+                {
+                    var query = uri.Query.TrimStart('?').Split('&');
+                    foreach (var param in query)
+                    {
+                        var kv = param.Split('=', 2);
+                        if (kv.Length == 2 && kv[0].Equals("sslmode", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (Enum.TryParse<Npgsql.SslMode>(kv[1], true, out var sslMode))
+                            {
+                                builder.SslMode = sslMode;
+                            }
+                        }
+                    }
+                }
+
                 return builder.ToString();
             }
             return connectionString;
@@ -120,10 +159,27 @@ namespace Infrastructure
                 return;
             }
 
-            // Redis is enabled - validate configuration and register with safe connection handling
-            var connectionString = configuration.GetConnectionString("REDIS_URL");
+            // Redis is enabled - resolve connection string across both ConnectionStrings and top-level ENV
+            var envRedis = configuration["REDIS_URL"]
+                ?? configuration["REDIS_CONNECTION_STRING"];
+            var connRedis = configuration.GetConnectionString("REDIS_URL")
+                ?? configuration.GetConnectionString("Redis");
 
-            if (string.IsNullOrWhiteSpace(connectionString))
+            string? connectionString = null;
+            if (!string.IsNullOrWhiteSpace(envRedis) && !envRedis.Equals("redis:6379", StringComparison.OrdinalIgnoreCase))
+            {
+                connectionString = envRedis;
+            }
+            else if (!string.IsNullOrWhiteSpace(connRedis) && !connRedis.Equals("redis:6379", StringComparison.OrdinalIgnoreCase))
+            {
+                connectionString = connRedis;
+            }
+            else
+            {
+                connectionString = !string.IsNullOrWhiteSpace(envRedis) ? envRedis : connRedis;
+            }
+
+            if (string.IsNullOrWhiteSpace(connectionString) || connectionString.Equals("redis:6379", StringComparison.OrdinalIgnoreCase))
             {
                 // Log warning but don't crash - allow in-memory fallback
                 // This ensures Production doesn't become unavailable due to missing Redis URL
@@ -131,9 +187,9 @@ namespace Infrastructure
                 {
                     var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("Redis.Configuration");
                     logger.LogWarning(
-                        "Redis is enabled in configuration but ConnectionStrings:REDIS_URL is not configured. " +
-                        "Rate limiting and caching will use in-memory fallback. " +
-                        "This is not recommended for production environments with multiple instances.");
+                        "Redis is enabled in configuration but REDIS_URL is not configured with a valid endpoint. " +
+                        "Rate limiting and caching will fall back to in-memory storage. " +
+                        "Provide a valid REDIS_URL (e.g., Upstash or Blitz Managed Redis), or disable Redis.");
                     return null!;
                 });
 
@@ -154,27 +210,48 @@ namespace Infrastructure
                         connectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
                     {
                         var uri = new Uri(connectionString);
+                        var isSsl = connectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase);
                         options = new ConfigurationOptions
                         {
                             AbortOnConnectFail = false,
-                            Ssl = connectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase),
+                            Ssl = isSsl,
                             ConnectRetry = 3,
                             ConnectTimeout = redisOptions.ConnectTimeoutMs,
                             SyncTimeout = redisOptions.SyncTimeoutMs,
                             KeepAlive = 180
                         };
-                        options.EndPoints.Add(uri.Host, uri.Port > 0 ? uri.Port : 6379);
+                        options.EndPoints.Add(uri.Host, uri.Port > 0 ? uri.Port : (isSsl ? 6380 : 6379));
 
-                        var userInfo = uri.UserInfo?.Split(':', 2);
-                        if (userInfo?.Length == 2)
+                        if (isSsl)
                         {
-                            options.User = userInfo[0];
-                            options.Password = userInfo[1];
+                            options.SslHost = uri.Host;
+                        }
+
+                        if (!string.IsNullOrEmpty(uri.UserInfo))
+                        {
+                            var userInfo = uri.UserInfo.Split(':', 2);
+                            if (userInfo.Length == 2)
+                            {
+                                var user = Uri.UnescapeDataString(userInfo[0]);
+                                var pass = Uri.UnescapeDataString(userInfo[1]);
+                                if (!string.IsNullOrWhiteSpace(user))
+                                {
+                                    options.User = user;
+                                }
+                                if (!string.IsNullOrWhiteSpace(pass))
+                                {
+                                    options.Password = pass;
+                                }
+                            }
+                            else if (userInfo.Length == 1 && !string.IsNullOrWhiteSpace(userInfo[0]))
+                            {
+                                options.Password = Uri.UnescapeDataString(userInfo[0]);
+                            }
                         }
                     }
                     else
                     {
-                        // Standard host:port format (e.g. "redis:6379")
+                        // Standard host:port format (e.g. "endpoint:6379")
                         options = ConfigurationOptions.Parse(connectionString);
                         options.AbortOnConnectFail = false;
                         options.ConnectRetry = 3;
@@ -192,9 +269,9 @@ namespace Infrastructure
                     else
                     {
                         logger.LogWarning(
-                            "Redis connection could not be established (AbortOnConnectFail=false allows graceful degradation). " +
-                            "Rate limiting and caching will fall back to in-memory storage. " +
-                            "This is not recommended for production environments with multiple instances.");
+                            "Redis connection could not be established to {Endpoints}. " +
+                            "Verify REDIS_URL in Blitz dashboard. Caching will fall back to in-memory.",
+                            string.Join(",", options.EndPoints));
                     }
 
                     return connection;
@@ -205,9 +282,8 @@ namespace Infrastructure
                     logger.LogError(
                         ex,
                         "Redis connection string is malformed. " +
-                        "Expected format: redis://username:password@host:port. " +
-                        "Rate limiting and caching will fall back to in-memory storage. " +
-                        "This is not recommended for production environments with multiple instances.");
+                        "Expected format: redis://:password@host:port or host:port. " +
+                        "Rate limiting and caching will fall back to in-memory storage.");
                     
                     return null!;
                 }
@@ -218,8 +294,7 @@ namespace Infrastructure
                         ex,
                         "Failed to initialize Redis connection. " +
                         "Rate limiting and caching will fall back to in-memory storage. " +
-                        "Check your ConnectionStrings:REDIS_URL configuration. " +
-                        "This is not recommended for production environments with multiple instances.");
+                        "Check your REDIS_URL configuration in Blitz dashboard.");
                     
                     return null!;
                 }

@@ -50,9 +50,20 @@ export const clearTokens = (): void => {
 };
 
 // ─── Axios Instance ─────────────────────────────────────────────
+// Note: All API endpoint calls in this codebase are already prefixed with '/api/'
+// (e.g. '/api/services', '/api/bookings', '/api/Auth/...').
+// When VITE_API_BASE_URL is not set (same-origin production via reverse proxy),
+// baseURL must be empty ('') so that Axios requests '/api/...' directly,
+// avoiding invalid duplicated paths like '/api/api/services'.
+const rawApiBase = (import.meta.env.VITE_API_BASE_URL || '').trim();
+const normalizedBaseUrl = rawApiBase.endsWith('/api')
+  ? rawApiBase.slice(0, -4)
+  : rawApiBase.endsWith('/')
+  ? rawApiBase.slice(0, -1)
+  : rawApiBase;
+
 const axiosInstance = axios.create({
-  // Base URL: Centralized point for all API requests
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  baseURL: normalizedBaseUrl,
   headers: { 'Content-Type': 'application/json' },
   timeout: 15_000,
 });

@@ -15,6 +15,12 @@ namespace API.Extensions
             // HTTP Context accessor must be registered before it's used
             services.AddHttpContextAccessor();
 
+            // Set explicit HTTPS port for reverse proxy / edge proxy SSL termination
+            services.AddHttpsRedirection(options =>
+            {
+                options.HttpsPort = 443;
+            });
+
             return services;
         }
     }

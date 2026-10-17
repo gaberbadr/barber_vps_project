@@ -1,71 +1,102 @@
 ================================================================================
 BLITZ.CLOUD DEPLOYMENT GUIDE (barber.devs.surf)
 ================================================================================
-Project: Barber Management System (.NET 8 + React SPA + PostgreSQL + Redis + Nginx)
+Project: Barber Management System (.NET 8 + React SPA + PostgreSQL + Redis)
 Target Domain: barber.devs.surf
 Platform: Blitz.cloud (Free Plan: 512 MB Shared RAM, 10 GB Storage)
 
 --------------------------------------------------------------------------------
-STEP 1: PUSH PROJECT TO GITHUB
+ROOT CAUSES & ARCHITECTURAL REALITIES ON BLITZ.CLOUD
 --------------------------------------------------------------------------------
-1. Ensure your local working tree is clean and .env is not tracked:
-   git status
+1. Why visiting `/` returned the backend welcome JSON:
+   - The repository previously lacked a root `Dockerfile`.
+   - Blitz.cloud's AI recipe generator detected the C# project and generated a
+     backend-only recipe running on port 8080.
+   - The backend controller (`HomeController.cs`) had a route `[HttpGet]` at root
+     `""` returning the Arabic welcome JSON.
+   - Blitz routed all public traffic on `barber.devs.surf` directly to port 8080.
 
-2. Commit all configuration updates and push to your GitHub repository:
-   git add .
-   git commit -m "Configure Blitz.cloud deployment with edge HTTPS"
-   git push origin main
+2. Why `db:5432` failed with "Name or service not known":
+   - Blitz.cloud is a serverless container PaaS (using gVisor sandboxes), NOT a VM
+     running `docker compose up`.
+   - Blitz explicitly leaves out databases and dev tools (`db`, `redis`, `pgadmin`)
+     declared in `docker-compose.yml`.
+   - The hostname `db` does not exist in Blitz internal DNS.
+   - PostgreSQL must be provisioned as a Blitz Managed Database (PostgreSQL 17),
+     which injects the real connection string via `DATABASE_URL`.
 
---------------------------------------------------------------------------------
-STEP 2: CREATE & CONFIGURE BLITZ.CLOUD APPLICATION
---------------------------------------------------------------------------------
-1. Log in to the Blitz.cloud dashboard (https://dashboard.blitz.cloud/).
-2. Under Account Settings -> Connected Accounts, ensure your GitHub account is linked.
-3. Click "Host something new" -> "My own code".
-4. Select your GitHub repository and set the branch to "main".
-5. Blitz.cloud detects docker-compose.yml:
-   - Application Name: barber (or preferred name)
-   - Exposed Port: 80 (traffic routes through the barber-nginx reverse proxy)
-   * Dashboard Verification: In the dashboard service configuration, verify that
-     the public entry point is mapped to the Nginx service on port 80.
+3. Why Redis failed and fell back to in-memory:
+   - Like PostgreSQL, the compose container `redis:6379` does not exist on Blitz.
+   - The code previously only checked `ConnectionStrings:REDIS_URL` and did not
+     check top-level `REDIS_URL` injected by Blitz, nor did it handle Valkey URL
+     formats without usernames (`redis://:password@host:6379/0`).
 
---------------------------------------------------------------------------------
-STEP 3: CONFIGURE CUSTOM DOMAIN & HTTPS (barber.devs.surf)
---------------------------------------------------------------------------------
-1. Add DNS Records at your domain registrar / DNS provider (Cloudflare, Namecheap):
-   -----------------------------------------------------------------
-   Type:   CNAME
-   Name:   barber (or barber.devs.surf)
-   Target: edge.blitz.cloud
-   TTL:    Auto (or 300 seconds)
-   -----------------------------------------------------------------
-   * CRITICAL FOR CLOUDFLARE USERS: Set proxy status to "DNS Only" (Grey Cloud).
-     If set to "Proxied" (Orange Cloud), Blitz.cloud cannot complete the
-     Let's Encrypt ACME verification at the edge router.
+4. Why "Failed to determine the https port for redirect" was logged:
+   - ASP.NET Core was running behind Blitz's edge reverse proxy terminating SSL.
+   - `UseHttpsRedirection()` was called without `ASPNETCORE_HTTPS_PORT=443` or
+     `HttpsRedirectionOptions.HttpsPort = 443`, and `X-Forwarded-Host` was omitted
+     from `ForwardedHeaders`.
 
-2. Ownership Verification (if prompted by Blitz.cloud dashboard):
-   Add a TXT record with Name: _blitz-verify.barber and the Value provided by Blitz.
-
-3. Connect Domain in Blitz.cloud:
-   - Go to your application dashboard -> "Domains" tab.
-   - Click "Connect a domain" and enter: barber.devs.surf
-   - Blitz.cloud provisions and manages Let's Encrypt TLS certificates at the edge.
+5. Why frontend API requests previously failed with `/api/api/...`:
+   - All frontend API calls already include `/api/` (e.g. `/api/services`).
+   - `axiosInstance` defaulted `baseURL` to `/api`, causing Axios to duplicate the
+     prefix to `/api/api/services`.
 
 --------------------------------------------------------------------------------
-STEP 4: SET REQUIRED ENVIRONMENT VARIABLES
+PRODUCTION ARCHITECTURE ON BLITZ.CLOUD
+--------------------------------------------------------------------------------
+The repository now includes a production-grade multi-stage root `Dockerfile`:
+- Stage 1: Builds the React SPA (`FrontEnd/`) with Vite into static production assets.
+- Stage 2: Builds the ASP.NET Core 8 Web API (`Backend/`) in Release mode.
+- Stage 3: Packages the API and places the React SPA directly into `wwwroot`.
+- ASP.NET Core serves:
+  * `/` and all SPA client routes (`/services`, `/booking`, `/login`, etc.) via `MapFallbackToFile("index.html")`.
+  * `/api/...` for all REST API endpoints.
+  * `/swagger/...` for OpenAPI documentation.
+  * `/health` for platform health monitoring.
+  * `/files/...` for uploaded avatars and documents.
+  * `/signin-google` for Google OAuth callback.
+- Total RAM footprint: ~150-180 MB (runs as 1 lean container app on Blitz).
+- Easily fits in Blitz's 512 MB Free Plan alongside Managed PostgreSQL (128 MB).
+
+--------------------------------------------------------------------------------
+STEP 1: PROVISION MANAGED POSTGRESQL ON BLITZ.CLOUD
+--------------------------------------------------------------------------------
+1. In Blitz.cloud dashboard (https://dashboard.blitz.cloud/databases), open your existing
+   PostgreSQL database: `barberDB` (status: Ready).
+2. Click the "Connect an app" button on the `barberDB` card and select your `barber` application.
+   - Blitz will automatically link the database and inject `DATABASE_URL`.
+   - Alternatively, if setting manually in the app's Environment Variables, set:
+     DATABASE_URL=postgresql://barberdb:PASSWORD@db-barberdb:5432/barberdb
+
+--------------------------------------------------------------------------------
+STEP 2: VERIFY THE BLITZ.CLOUD APPLICATION
+--------------------------------------------------------------------------------
+1. In Blitz dashboard, open your `barber` application.
+2. Verify it is connected to your repository and branch `main`.
+3. Blitz detects the root `Dockerfile`:
+   - Exposed Port: 8080
+   - Multi-stage build compiles React SPA + .NET 8 Release
+4. Under "Databases", verify `barberDB` is connected.
+
+--------------------------------------------------------------------------------
+STEP 3: CONFIGURE UPSTASH REDIS (CACHE & RATE LIMITING)
+--------------------------------------------------------------------------------
+Your Upstash Redis database is active and verified!
+In Blitz dashboard -> Application -> Settings -> Environment Variables, add:
+- `REDIS_URL`: rediss://default:YOUR_UPSTASH_TOKEN@correct-rat-169646.upstash.io:6379
+- `CacheSettings__Redis__Enabled`: true
+
+Note: The local Docker Compose Redis service has been completely removed.
+Local development and production both use the distributed Upstash Redis (or in-memory if disabled).
+
+--------------------------------------------------------------------------------
+STEP 4: SET REQUIRED ENVIRONMENT VARIABLES IN BLITZ DASHBOARD
 --------------------------------------------------------------------------------
 In Blitz.cloud dashboard -> Application -> Settings -> Environment Variables,
-add the following keys before deploying:
+add the following keys:
 
-# Database Credentials
-DB_PASSWORD=YourStrongDatabasePassword123!
-ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=project1;Username=postgres;Password=YourStrongDatabasePassword123!
-
-# Redis Cache (Gracefully falls back to in-memory if Redis is unavailable)
-ConnectionStrings__REDIS_URL=redis:6379
-CacheSettings__Redis__Enabled=true
-
-# Security & Authentication (Generate a random 64-character secret for Key)
+# Security & Authentication (Generate a strong random 64-character secret for Key)
 JWT__Key=YourLongRandom64CharacterSecretKeyGoesHere1234567890abcdefghijklm
 JWT__Issuer=https://barber.devs.surf/api
 JWT__Audience=project1
@@ -74,95 +105,76 @@ JWT__RefreshTokenExpirationDays=7
 
 # Base URLs & CORS
 BaseURL=https://barber.devs.surf/api
-Frontend__AllowedBaseUrls__0=http://barber.devs.surf
-Frontend__AllowedBaseUrls__1=https://barber.devs.surf
+Frontend__AllowedBaseUrls__0=https://barber.devs.surf
+Frontend__AllowedBaseUrls__1=http://barber.devs.surf
 DOMAIN=barber.devs.surf
+
+# HTTPS & Reverse Proxy Settings
+ASPNETCORE_HTTPS_PORT=443
+ASPNETCORE_ENVIRONMENT=Production
+
+# Database (Automatically injected by Blitz when linked in Step 2; verify presence)
+# DATABASE_URL=postgresql://user:password@host:5432/name
+# IMPORTANT: Delete or remove any old "ConnectionStrings__DefaultConnection=Host=db..."
+# variable from your dashboard settings so it does not conflict!
+
+# Redis Cache Settings
+CacheSettings__Redis__Enabled=true
+# (Set REDIS_URL if using Managed Redis or Upstash, or set Enabled=false if using in-memory)
 
 # Google OAuth (Optional: required only if using Google login)
 Authentication__Google__ClientId=your_google_client_id
 Authentication__Google__ClientSecret=your_google_client_secret
-* Note: In Google Cloud Console, add Authorized Redirect URI:
+* Google Cloud Console Authorized Redirect URI:
   https://barber.devs.surf/signin-google
 
 --------------------------------------------------------------------------------
-STEP 5: DEPLOY & VERIFY
+STEP 5: CONFIGURE CUSTOM DOMAIN & HTTPS (barber.devs.surf)
 --------------------------------------------------------------------------------
-1. Trigger Deployment:
-   Click "Deploy" in Blitz.cloud (or push to main). Monitor the "Activity / Logs" tab.
+1. Add DNS Record at your domain registrar / DNS provider (Cloudflare, Namecheap):
+   Type:   CNAME
+   Name:   barber (or barber.devs.surf)
+   Target: edge.blitz.cloud
+   TTL:    Auto (or 300 seconds)
+   * CLOUDFLARE USERS: Set proxy status to "DNS Only" (Grey Cloud).
 
-2. Verify Health Check:
-   Visit: https://barber.devs.surf/health
-   Expected response: HTTP 200 {"status":"Healthy",...}
-
-3. Verify Frontend SPA:
-   Visit: https://barber.devs.surf/
-   Verify that the React app loads with all styling, assets, and routes.
-
-4. Verify Backend API & Swagger:
-   Visit: https://barber.devs.surf/swagger
-   Verify that OpenAPI documentation loads and endpoints respond.
-
-5. Verify Database Migrations & Seeders:
-   EF Core migrations (context.Database.MigrateAsync()) and initial data seeders
-   (roles, default admin, services, working hours) run automatically on boot.
-   No manual SQL scripts or migration CLI commands are needed.
+2. Connect Domain in Blitz.cloud:
+   - Go to application dashboard -> "Domains" tab.
+   - Click "Connect a domain" and enter: barber.devs.surf
+   - Blitz.cloud provisions and manages Let's Encrypt certificates at the edge.
 
 --------------------------------------------------------------------------------
-STEP 6: REDEPLOYING AFTER NEW COMMITS
+STEP 6: DEPLOY & VERIFY
 --------------------------------------------------------------------------------
-1. Make local code changes and test locally.
-2. Push your changes to GitHub:
+1. Push all code changes to GitHub:
    git add .
-   git commit -m "Describe your update"
+   git commit -m "Fix Blitz.cloud deployment: root Dockerfile, SPA routing, real DB/Redis config"
    git push origin main
-3. Blitz.cloud detects the new commit via webhook and automatically triggers a build.
-4. If auto-deploy is disabled, click "Redeploy" in the Blitz.cloud dashboard Activity tab.
+
+2. Monitor the build in Blitz.cloud dashboard (Activity / Logs tab).
+   Verify that:
+   - Frontend Vite build completes (`dist` created).
+   - Backend .NET 8 Release build and publish complete.
+   - Container starts on port 8080.
+   - EF Core migrations (`MigrateAsync()`) and seeders run successfully on boot.
+
+3. Live Verification Checks:
+   - Root Frontend: Visit https://barber.devs.surf/
+     Expected: React SPA loads (Hero section, Services, Booking UI).
+   - Healthcheck: Visit https://barber.devs.surf/health
+     Expected: HTTP 200 {"status":"Healthy",...}
+   - Swagger Docs: Visit https://barber.devs.surf/swagger
+     Expected: Swagger UI interactive API documentation.
+   - API Metadata: Visit https://barber.devs.surf/api/info
+     Expected: HTTP 200 backend info JSON.
+   - Google OAuth: Visit https://barber.devs.surf/signin-google
+     Expected: Handled by Google authentication middleware.
 
 --------------------------------------------------------------------------------
-CRITICAL WARNINGS: STORAGE, PERSISTENCE & PLATFORM REALITIES
+LOCAL DEVELOPMENT WITH DOCKER COMPOSE
 --------------------------------------------------------------------------------
-1. Database Persistence:
-   - PostgreSQL data persists in the Docker named volume "postgres_data".
-   - Code redeployments and container restarts do NOT wipe named volumes.
-   - Free Plan Backup Warning: Automated nightly off-site backups in Blitz.cloud
-     apply only to Blitz.cloud Managed Databases, NOT custom Compose containers.
-   - For automated off-site backups and dashboard pg_dump downloads, provision a
-     Blitz.cloud Managed PostgreSQL instance and set DATABASE_URL in the dashboard.
-
-2. 30-Minute Inactivity Sleep (Free Tier):
-   - Free plan applications sleep after 30 minutes without visitors.
-   - The first request after sleep experiences a 5–10 second cold start to wake
-     containers. Automated pings do not prevent sleep on the free tier.
-
-3. Outbound SMTP Ports Blocked:
-   - Blitz.cloud firewall blocks outbound TCP ports 25, 465, and 587.
-   - Direct SMTP connections (e.g. smtp.gmail.com:587) will fail/timeout.
-   - Use an HTTPS REST API email provider (e.g. Resend, SendGrid) over port 443
-     if sending production emails.
-
-4. pgAdmin Accessibility:
-   - Blitz.cloud provides NO SSH terminal access; SSH tunneling (ssh -L) is impossible.
-   - The pgadmin service bound to 127.0.0.1:5050 cannot be reached externally.
-   - To conserve RAM under the 512 MB shared budget, leave pgAdmin stopped or comment
-     it out in docker-compose.yml.
-
---------------------------------------------------------------------------------
-CRITICAL TROUBLESHOOTING
---------------------------------------------------------------------------------
-- "ERR_TOO_MANY_REDIRECTS":
-  Edge proxy terminates HTTPS and forwards to Nginx on port 80. Nginx passes
-  X-Forwarded-Proto $forwarded_proto, and ASP.NET Core UseForwardedHeaders respects
-  it. Do not add unconditional HTTP redirects inside the application.
-
-- "SSL Certificate Not Issued / Not Secure":
-  Confirm the CNAME points to edge.blitz.cloud and Cloudflare proxy is set to
-  "DNS Only" (Grey Cloud). Allow up to 5 minutes for Let's Encrypt issuance.
-
-- Backend Crashes on Startup ("502 Bad Gateway"):
-  Check Blitz.cloud logs for "Startup.DatabaseInitialization". Verify that
-  DB_PASSWORD in the database container matches ConnectionStrings__DefaultConnection.
-
-- High RAM / OOM (Out Of Memory) Crashes:
-  The free tier shares 512 MB across all containers. Ensure pgAdmin is disabled
-  to leave maximum memory for the .NET API, PostgreSQL, and React frontend.
+For local development on your workstation with full Docker Compose:
+  docker compose up --build
+This will run the multi-container stack (`barber-api`, `barber-frontend`,
+`barber-nginx`, `barber-postgres`, `barber-redis`) on http://localhost.
 ================================================================================

@@ -32,18 +32,23 @@ namespace API.Extensions
                 app.UseExceptionHandler("/error");
             }
 
-            // Configure Forwarded Headers to parse X-Forwarded-For and X-Forwarded-Proto from Nginx
+            // Configure Forwarded Headers to parse X-Forwarded-For, X-Forwarded-Proto, and X-Forwarded-Host from reverse proxies (Blitz / Nginx)
             var forwardedHeadersOptions = new ForwardedHeadersOptions
             {
                 ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | 
-                                   Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+                                   Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto |
+                                   Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedHost
             };
-            // Clear known networks/proxies so it trusts the Docker network proxy (Nginx)
+            // Clear known networks/proxies so it trusts the Docker network proxy (Nginx / Blitz Edge)
             forwardedHeadersOptions.KnownNetworks.Clear();
             forwardedHeadersOptions.KnownProxies.Clear();
             app.UseForwardedHeaders(forwardedHeadersOptions);
 
             app.UseHttpsRedirection();
+
+            // Serve default files (index.html) and static assets from wwwroot for React SPA
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
 
             // Configure file serving safely using WebHost Environment paths
             var webRootPath = app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");

@@ -115,6 +115,7 @@ logger.LogInformation("Database initialization completed. Application is startin
 app.UseSwaggerDocumentation();
 app.UseApiMiddlewares();
 app.MapControllers();
+app.MapFallbackToFile("index.html");
 
 app.Run();
 

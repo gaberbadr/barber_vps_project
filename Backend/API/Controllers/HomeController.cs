@@ -8,7 +8,7 @@ namespace Controllers
     [ApiExplorerSettings(IgnoreApi = true)]
     public class HomeController : ControllerBase
     {
-        [HttpGet]
+        [HttpGet("api/info")]
         public IActionResult Index()
         {
             return Ok(new

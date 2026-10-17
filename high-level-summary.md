@@ -1,59 +1,50 @@
 # High-Level Architecture Summary
 
-Here is a complete, high-level summary of your entire production architecture and how everything flows together.
+Here is a complete, high-level summary of your production architecture on Blitz.cloud and local Docker Compose development.
 
-## 1. The Containers (The "Services")
-Your application is broken down into isolated services running inside a private Docker network (`barber-network`):
+## 1. Production Architecture on Blitz.cloud
 
-- **Frontend (`barber-frontend`)**: A lightweight Nginx alpine image that serves your built React SPA.
-- **Backend (`barber-api`)**: Your ASP.NET Core API running on a Linux .NET 8 runtime.
-- **Database (`barber-postgres`)**: PostgreSQL 16. It saves its data persistently to a Docker volume (`postgres_data`) so data isn't lost across restarts or redeployments.
-- **Cache (`barber-redis`)**: A Redis container used for fast caching and distributed rate limiting (with automatic in-memory fallback).
-- **Reverse Proxy (`barber-nginx`)**: The internal entrypoint for your application. It routes incoming traffic from the Blitz.cloud edge router to the Frontend (`/`), Backend (`/api/`), Swagger (`/swagger/`), Uploads (`/files/`), and Health Check (`/health`).
-- **Database Administration (`barber-pgadmin`)**: pgAdmin 4 for administrative operations, bound locally for security.
+On Blitz.cloud, the application runs as a production-grade containerized service connected to managed infrastructure:
 
-## 2. The Configuration Flow (Environment Variables)
-Configuration is managed through environment variables (set in Blitz.cloud dashboard or `.env` file):
+- **Unified Production Container**: Built via the root `Dockerfile`.
+  - Compiles the React SPA (`FrontEnd/`) via Vite into static assets in `wwwroot`.
+  - Compiles the ASP.NET Core 8 Web API (`Backend/`) in Release mode.
+  - Serves `/` and all frontend routes via SPA fallback (`MapFallbackToFile("index.html")`).
+  - Serves `/api/...`, `/swagger/...`, `/health`, `/files/...`, and `/signin-google` directly.
+  - Total memory consumption: ~150-180 MB RAM (well under the 512 MB Free Plan limit).
+- **Managed Database (`barber-db`)**: Blitz.cloud Managed PostgreSQL 17 (128 MB RAM).
+  - Automatically provisions persistent storage and automated nightly off-site backups.
+  - Injects `DATABASE_URL` directly into the application environment.
+- **Managed Cache (Upstash Redis / TLS)**:
+  - Connected via Upstash external Redis (`rediss://` with TLS on port 6379).
+  - Securely parses credentials, enables SNI verification, and provides distributed caching and rate limiting.
+  - Fallback to in-memory caching and rate limiting is supported if Redis is disabled.
+- **Blitz Edge Router**:
+  - Handles incoming HTTPS traffic on port 443 at `barber.devs.surf`.
+  - Terminates TLS with auto-renewing Let's Encrypt certificates.
+  - Forwards requests to the container on port 8080 with `X-Forwarded-Proto: https` and `X-Forwarded-Host`.
 
-- **The Backend**: Docker/Blitz.cloud injects variables into the backend. Because ASP.NET understands double underscores (`__`), it automatically overrides matching configuration in `appsettings.json` (such as `JWT__Key` or `ConnectionStrings__DefaultConnection`).
-- **The Database**: Docker reads `DB_PASSWORD` and uses it to configure PostgreSQL authentication.
-- **The Frontend**: The frontend is built as static HTML/JS/CSS assets that send requests to `/api`.
+## 2. Local Development Architecture (`docker-compose.yml`)
 
-## 3. The Traffic Flow (Blitz.cloud Edge + Nginx)
-Security and routing flow:
+For local development on your machine, `docker-compose.yml` provides a multi-container isolated cluster:
 
-When a user visits `https://barber.devs.surf`:
-1. The request hits Blitz.cloud's managed edge reverse proxy on port 443.
-2. Blitz.cloud terminates TLS/HTTPS using its automatically managed Let's Encrypt certificate and injects `X-Forwarded-Proto: https`.
-3. Blitz.cloud forwards the request to your `barber-nginx` container on port 80.
-4. Nginx inspects the route:
-   - If the request is for `/` or frontend pages, Nginx proxies it to the Frontend container.
-   - If the request starts with `/api/`, Nginx proxies it to `http://backend:8080/api/`.
-   - If the request starts with `/signin-google`, Nginx proxies it to `http://backend:8080/signin-google` (Google OAuth callback).
-   - If the request starts with `/files/`, Nginx proxies it to `http://backend:8080/files/`.
-   - If the request starts with `/swagger/`, Nginx proxies it to `http://backend:8080/swagger/`.
-   - If the request is `/health`, Nginx proxies it to `http://backend:8080/health`.
+- **Frontend (`barber-frontend`)**: Nginx alpine container serving the React SPA on port 80.
+- **Backend (`barber-api`)**: ASP.NET Core API running on port 8080.
+- **Reverse Proxy (`barber-nginx`)**: Self-contained Nginx image (`nginx/Dockerfile`) routing `/` to `frontend:80` and `/api/`, `/swagger/`, `/health`, `/files/`, `/signin-google` to `backend:8080`.
+- **Database (`barber-postgres`)**: PostgreSQL 16 container storing data in named volume `postgres_data`.
+- **Cache**: Connects to the external Upstash Redis instance (or in-memory cache). Obsolete local Redis container removed.
+- **Admin (`barber-pgadmin`)**: pgAdmin 4 bound locally to port 5050.
 
-This completely eliminates CORS issues because the browser interacts with the exact same domain for both frontend and backend.
+## 3. Configuration & Environment Variables
 
-## 4. The Certificate & SSL Flow (Managed Edge HTTPS)
-On Blitz.cloud, SSL management is fully automated at the edge:
-- Blitz.cloud provisions and renews valid Let's Encrypt certificates automatically for `barber.devs.surf` and any `*.blitz.cloud` subdomains.
-- No in-container Certbot loops, manual scripts (`init-letsencrypt.sh`), or local certificate files are required.
-- Nginx starts instantly on port 80 without any chicken-and-egg startup dependency.
+- **The Backend**: Reads `DATABASE_URL` (or `ConnectionStrings__DefaultConnection`) and `REDIS_URL` (or `ConnectionStrings__REDIS_URL`). Automatically detects and handles URL-encoded passwords, postgresql/redis URI schemes, and Blitz.cloud managed hosts.
+- **Security & JWT**: Configured via `JWT__Key`, `JWT__Issuer`, and `JWT__Audience`.
+- **Reverse Proxy & Forwarded Headers**: ASP.NET Core `UseForwardedHeaders` parses `X-Forwarded-For`, `X-Forwarded-Proto`, and `X-Forwarded-Host` while trusting proxy networks. `HttpsPort` is set to 443 to avoid redirect warnings.
+- **Google OAuth**: Preserves callback at `/signin-google` with matching public HTTPS domain.
 
-## 5. Startup & Dependency Flow
-When Docker starts the project:
-1. `db` (PostgreSQL) and `redis` boot up first.
-2. PostgreSQL runs a healthcheck (`pg_isready -U postgres -d project1`).
-3. `backend` waits for `db` to be healthy before starting.
-4. On startup, `backend` automatically applies pending EF Core migrations (`context.Database.MigrateAsync()`) and seeds default roles and admin data.
-5. `frontend` starts up.
-6. `nginx` starts up once `backend` and `frontend` are ready, beginning to accept traffic on port 80.
+## 4. Frontend API Resolution & Routing
 
-## 6. Frontend Base URL & Same-Origin Routing
-- In `FrontEnd/src/api/axiosInstance.ts`, the API base URL is:
-  `baseURL: import.meta.env.VITE_API_BASE_URL || '/api'`
-- In production, it defaults to `/api`.
-- Nginx intercepts all `/api` requests and forwards them to `http://backend:8080/api/`.
-- This ensures full portability: if the domain changes, no frontend rebuild or environment variable modification is required.
+- In `FrontEnd/src/api/axiosInstance.ts`:
+  - `baseURL` normalizes `VITE_API_BASE_URL` and defaults to `''` for same-origin production.
+  - Prevents URL duplication (e.g. avoiding `/api/api/services`).
+  - Calls to `/api/services`, `/api/bookings`, `/api/Auth/...` resolve seamlessly to `https://barber.devs.surf/api/...`.
