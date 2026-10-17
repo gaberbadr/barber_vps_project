@@ -36,5 +36,42 @@ namespace Controllers
                 environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"
             });
         }
+
+        [HttpGet("api/health/db")]
+        public async Task<IActionResult> CheckDatabase([FromServices] API.Infrastructure.Persistence.Context.ApplicationDbContext dbContext)
+        {
+            try
+            {
+                var canConnect = await dbContext.Database.CanConnectAsync();
+                if (canConnect)
+                {
+                    return Ok(new
+                    {
+                        status = "Healthy",
+                        database = "Connected",
+                        provider = "PostgreSQL",
+                        timestamp = DateTime.UtcNow
+                    });
+                }
+
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+                {
+                    status = "Unhealthy",
+                    database = "Disconnected",
+                    message = "Database is unreachable. Verify DATABASE_URL in Blitz dashboard.",
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+                {
+                    status = "Unhealthy",
+                    database = "ConnectionFailed",
+                    message = "Failed to connect to configured PostgreSQL server. Verify DATABASE_URL in Blitz dashboard.",
+                    timestamp = DateTime.UtcNow
+                });
+            }
+        }
     }
 }

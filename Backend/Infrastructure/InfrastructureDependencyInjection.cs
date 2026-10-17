@@ -87,7 +87,13 @@ namespace Infrastructure
 
             services.AddDbContext<ApplicationDbContext>(options =>
             {
-                options.UseNpgsql(connectionString);
+                options.UseNpgsql(connectionString, npgsqlOptions =>
+                {
+                    npgsqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(10),
+                        errorCodesToAdd: null);
+                });
             });
         }
 
@@ -100,7 +106,7 @@ namespace Infrastructure
                 var userInfo = uri.UserInfo?.Split(':', 2);
                 var username = userInfo != null && userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : "";
                 var password = userInfo != null && userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
-                var database = uri.AbsolutePath.TrimStart('/');
+                var database = uri.AbsolutePath.Trim('/');
 
                 var builder = new Npgsql.NpgsqlConnectionStringBuilder
                 {
@@ -109,7 +115,9 @@ namespace Infrastructure
                     Username = username,
                     Password = password,
                     Database = database,
-                    SslMode = Npgsql.SslMode.Prefer
+                    SslMode = Npgsql.SslMode.Prefer,
+                    Timeout = 15,
+                    CommandTimeout = 30
                 };
 
                 if (!string.IsNullOrWhiteSpace(uri.Query))
@@ -118,11 +126,16 @@ namespace Infrastructure
                     foreach (var param in query)
                     {
                         var kv = param.Split('=', 2);
-                        if (kv.Length == 2 && kv[0].Equals("sslmode", StringComparison.OrdinalIgnoreCase))
+                        if (kv.Length == 2)
                         {
-                            if (Enum.TryParse<Npgsql.SslMode>(kv[1], true, out var sslMode))
+                            var key = kv[0].Trim();
+                            var val = Uri.UnescapeDataString(kv[1].Trim());
+                            if (key.Equals("sslmode", StringComparison.OrdinalIgnoreCase))
                             {
-                                builder.SslMode = sslMode;
+                                if (Enum.TryParse<Npgsql.SslMode>(val, true, out var sslMode))
+                                {
+                                    builder.SslMode = sslMode;
+                                }
                             }
                         }
                     }
@@ -130,6 +143,7 @@ namespace Infrastructure
 
                 return builder.ToString();
             }
+
             return connectionString;
         }
 
