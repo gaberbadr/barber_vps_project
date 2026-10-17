@@ -75,35 +75,13 @@ services:
     depends_on:
       - backend
       - frontend
-      - pgadmin
-    env_file:
-      - .env
     networks:
       - barber-network
     restart: unless-stopped
-
-  pgadmin:
-    image: dpage/pgadmin4:8.14
-    container_name: barber-pgadmin
-    restart: unless-stopped
-    expose:
-      - "80"
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:?Set PGADMIN_DEFAULT_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?Set PGADMIN_DEFAULT_PASSWORD}
-      SCRIPT_NAME: /pgadmin
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    networks:
-      - barber-network
-    depends_on:
-      db:
-        condition: service_healthy
 
 volumes:
   postgres_data:
   api_files:
-  pgadmin_data:
 
 
 networks:

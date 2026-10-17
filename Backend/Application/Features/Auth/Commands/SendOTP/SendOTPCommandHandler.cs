@@ -56,15 +56,25 @@ namespace Application.Features.Auth.Commands.SendOTP
                     return Error.Failure("auth.user.blocked", "حسابك موقوف. يرجى التواصل مع الدعم.");
                 }
 
-                // Check if an existing OTP is still valid
-                if (user.CodeExpiresAt != null && user.CodeExpiresAt > DateTime.UtcNow)
+                // Rate-limiting / cooldown check:
+                // Only throttle if a verification code was already requested within the last 60 seconds
+                if (user.UpdatedAt != null && user.CodeExpiresAt != null && user.CodeExpiresAt > DateTime.UtcNow)
                 {
-                    return Error.Conflict("auth.otp.valid", "يوجد كود تحقق صالح بالفعل.");
+                    var secondsSinceLastRequest = (DateTime.UtcNow - user.UpdatedAt.Value).TotalSeconds;
+                    if (secondsSinceLastRequest >= 0 && secondsSinceLastRequest < 60)
+                    {
+                        var remainingSeconds = Math.Max(1, (int)Math.Ceiling(60 - secondsSinceLastRequest));
+                        _logger.LogWarning("Throttled OTP request for email {EmailMasked}. Must wait {Remaining}s", MaskEmail(request.Email), remainingSeconds);
+                        return Error.Conflict("auth.otp.cooldown", $"يرجى الانتظار {remainingSeconds} ثانية قبل طلب كود جديد.");
+                    }
                 }
 
-                // Generate OTP
+                // Generate 6-digit OTP with a realistic 5-minute expiry window (preventing accidental 12-hour lockout)
                 var otp = new Random().Next(100000, 999999).ToString();
-                user.SetVerificationCode(otp, DateTime.UtcNow.AddMinutes(_emailConfiguration.ExpirationMinutes));
+                var validMinutes = _emailConfiguration.ExpirationMinutes > 0 && _emailConfiguration.ExpirationMinutes <= 15
+                    ? _emailConfiguration.ExpirationMinutes
+                    : 5;
+                user.SetVerificationCode(otp, DateTime.UtcNow.AddMinutes(validMinutes));
 
                 var updateResult = await _userManager.UpdateAsync(user);
                 if (!updateResult.Succeeded)

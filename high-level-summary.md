@@ -33,7 +33,7 @@ For local development on your machine, `docker-compose.yml` provides a multi-con
 - **Reverse Proxy (`barber-nginx`)**: Self-contained Nginx image (`nginx/Dockerfile`) routing `/` to `frontend:80` and `/api/`, `/swagger/`, `/health`, `/files/`, `/signin-google` to `backend:8080`.
 - **Database (`barber-postgres`)**: PostgreSQL 16 container storing data in named volume `postgres_data`.
 - **Cache**: Connects to the external Upstash Redis instance (or in-memory cache). Obsolete local Redis container removed.
-- **Admin (`barber-pgadmin`)**: pgAdmin 4 bound locally to port 5050.
+- **Database Management**: Managed externally from your PC using pgAdmin 4 or DBeaver connected directly to PostgreSQL.
 
 ## 3. Configuration & Environment Variables
 

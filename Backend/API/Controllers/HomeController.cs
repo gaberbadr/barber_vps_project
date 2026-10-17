@@ -85,11 +85,18 @@ namespace Controllers
         }
 
         [HttpGet("api/health/email")]
-        public async Task<IActionResult> CheckEmailHealth([FromServices] IOptions<EmailOptions> emailOptionsAccessor)
+        public async Task<IActionResult> CheckEmailHealth(
+            [FromServices] IOptions<EmailOptions> emailOptionsAccessor,
+            [FromQuery] string? host = null,
+            [FromQuery] int? port = null)
         {
             var options = emailOptionsAccessor.Value;
-            var host = string.IsNullOrWhiteSpace(options.Host) ? "smtp.gmail.com" : options.Host;
-            var port = options.Port > 0 ? options.Port : 587;
+            var targetHost = !string.IsNullOrWhiteSpace(host) 
+                ? host.Trim() 
+                : (string.IsNullOrWhiteSpace(options.Host) ? "smtp.gmail.com" : options.Host);
+            var targetPort = port.HasValue && port.Value > 0 
+                ? port.Value 
+                : (options.Port > 0 ? options.Port : 587);
             var isConfigured = !string.IsNullOrWhiteSpace(options.SmtpUsername) &&
                                options.SmtpUsername != "your_email@gmail.com" &&
                                !string.IsNullOrWhiteSpace(options.SmtpPassword) &&
@@ -97,8 +104,8 @@ namespace Controllers
 
             var result = new Dictionary<string, object>
             {
-                ["host"] = host,
-                ["port"] = port,
+                ["host"] = targetHost,
+                ["port"] = targetPort,
                 ["enableSsl"] = options.EnableSsl,
                 ["isConfigured"] = isConfigured,
                 ["senderConfigured"] = !string.IsNullOrWhiteSpace(options.SenderEmail) && options.SenderEmail != "your_email@gmail.com",
@@ -108,7 +115,7 @@ namespace Controllers
             // 1. Check DNS resolution
             try
             {
-                var addresses = await Dns.GetHostAddressesAsync(host);
+                var addresses = await Dns.GetHostAddressesAsync(targetHost);
                 result["dnsResolution"] = "Success";
                 result["resolvedIpCount"] = addresses.Length;
             }
@@ -125,7 +132,7 @@ namespace Controllers
             {
                 using var tcpClient = new TcpClient();
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                await tcpClient.ConnectAsync(host, port, cts.Token);
+                await tcpClient.ConnectAsync(targetHost, targetPort, cts.Token);
                 result["tcpConnection"] = "Connected";
                 result["status"] = isConfigured ? "Healthy" : "Degraded (Credentials not configured)";
                 return Ok(result);
@@ -134,7 +141,7 @@ namespace Controllers
             {
                 result["tcpConnection"] = "TimedOut";
                 result["status"] = "Unhealthy";
-                result["diagnosticDetail"] = $"Outbound TCP connection to {host}:{port} timed out after 5 seconds. Blitz.cloud blocks outbound ports 25, 465, and 587. Consider using port 2525 or a transactional email HTTP API (e.g. Brevo/Resend).";
+                result["diagnosticDetail"] = $"Outbound TCP connection to {targetHost}:{targetPort} timed out after 5 seconds. Blitz.cloud blocks outbound ports 25, 465, and 587. Consider using port 2525 or a transactional email HTTP API (e.g. Brevo/Resend).";
                 return StatusCode(StatusCodes.Status503ServiceUnavailable, result);
             }
             catch (Exception ex)
@@ -142,7 +149,7 @@ namespace Controllers
                 result["tcpConnection"] = "Failed";
                 result["tcpError"] = ex.Message;
                 result["status"] = "Unhealthy";
-                result["diagnosticDetail"] = $"Outbound TCP connection to {host}:{port} failed: {ex.Message}. Blitz.cloud blocks outbound ports 25, 465, and 587. Consider using port 2525 or a transactional email HTTP API.";
+                result["diagnosticDetail"] = $"Outbound TCP connection to {targetHost}:{targetPort} failed: {ex.Message}. Blitz.cloud blocks outbound ports 25, 465, and 587. Consider using port 2525 or a transactional email HTTP API.";
                 return StatusCode(StatusCodes.Status503ServiceUnavailable, result);
             }
         }

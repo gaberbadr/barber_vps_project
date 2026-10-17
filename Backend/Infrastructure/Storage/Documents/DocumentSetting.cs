@@ -805,7 +805,12 @@ namespace Infrastructure.Storage.Documents
         {
             string safeFileName = Path.GetFileName(fileName);
             string safeFolderName = GetSafeFolderName(folderName);
-            return $"{baseUrl.TrimEnd('/')}/files/{safeFolderName}/{safeFileName}";
+            var cleanBaseUrl = (baseUrl ?? string.Empty).Trim().TrimEnd('/');
+            if (cleanBaseUrl.EndsWith("/api", StringComparison.OrdinalIgnoreCase))
+            {
+                cleanBaseUrl = cleanBaseUrl[..^4].TrimEnd('/');
+            }
+            return $"{cleanBaseUrl}/files/{safeFolderName}/{safeFileName}";
         }
 
         public static string GetFolderPath(string folderName)

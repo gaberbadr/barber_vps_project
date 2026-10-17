@@ -66,7 +66,7 @@ namespace API.Extensions
                 ".pdf", ".docx", ".xlsx", ".pptx", ".txt", ".rtf"
             };
 
-            app.UseStaticFiles(new StaticFileOptions
+            var staticFileOptions = new StaticFileOptions
             {
                 FileProvider = new PhysicalFileProvider(filesPath),
                 RequestPath = "/files",
@@ -104,6 +104,16 @@ namespace API.Extensions
                         _ => "application/octet-stream"
                     };
                 }
+            };
+
+            app.UseStaticFiles(staticFileOptions);
+
+            // Also support /api/files request path for backwards compatibility with any existing URLs containing /api
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = staticFileOptions.FileProvider,
+                RequestPath = "/api/files",
+                OnPrepareResponse = staticFileOptions.OnPrepareResponse
             });
 
             // Security headers for production

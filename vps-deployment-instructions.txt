@@ -185,27 +185,20 @@ STEP 6: DEPLOY & VERIFY
      Expected: Handled by Google authentication middleware.
 
 --------------------------------------------------------------------------------
-DOCKER COMPOSE & VPS DEPLOYMENT (NGINX + PGADMIN)
+DOCKER COMPOSE & VPS DEPLOYMENT
 --------------------------------------------------------------------------------
-When running the full multi-container stack with Nginx on a VPS or container host:
-1. Environment Configuration:
-   In `.env`, configure pgAdmin and HTTP Basic Auth credentials:
-   PGADMIN_DEFAULT_EMAIL=admin@barber.local
-   PGADMIN_DEFAULT_PASSWORD=your_strong_pgadmin_password_here
-   PGADMIN_BASIC_AUTH_USER=admin
-   PGADMIN_BASIC_AUTH_PASSWORD=your_strong_pgadmin_password_here
+For multi-container deployment on a VPS or local workstation with Docker Compose:
+  docker compose up -d --build
+This runs:
+- `barber-api`: ASP.NET Core 8 Backend API (internal port 8080)
+- `barber-frontend`: React SPA (internal port 80)
+- `barber-postgres`: PostgreSQL 16 (internal port 5432, persisted in postgres_data)
+- `barber-nginx`: Nginx reverse proxy routing traffic on port 80
 
-2. Safe Zero-Downtime / Non-Destructive Update:
-   Build and restart only the Nginx and pgAdmin containers without touching databases:
-   docker compose up -d --build nginx pgadmin
-
-3. Access pgAdmin:
-   URL: https://gaber.blitz.cloud/pgadmin/
-   - Layer 1 (Nginx Basic Auth): Enter PGADMIN_BASIC_AUTH_USER & PGADMIN_BASIC_AUTH_PASSWORD
-   - Layer 2 (pgAdmin 4 Login): Enter PGADMIN_DEFAULT_EMAIL & PGADMIN_DEFAULT_PASSWORD
-
-4. Network Security:
-   - pgAdmin port 80 is strictly internal on 'barber-network' and not exposed to the public internet.
-   - All external access goes through Nginx with authentication and reverse-proxy header protections.
+DATABASE MANAGEMENT (EXTERNAL FROM YOUR PC):
+- On Blitz.cloud: Connect to 'barberDB' directly using a local client (pgAdmin 4,
+  DBeaver, TablePlus, or VS Code Database extension) using the external connection
+  string provided in Blitz.cloud Dashboard -> Databases -> barberDB.
+- On Local Dev / VPS: Connect to localhost:5432 with your configured DB_PASSWORD.
 ================================================================================
 
