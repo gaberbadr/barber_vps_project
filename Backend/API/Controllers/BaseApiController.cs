@@ -25,7 +25,8 @@ namespace API.Controllers
                 ErrorOr.ErrorType.Unauthorized => Unauthorized(apiResponse),
                 ErrorOr.ErrorType.Forbidden => Forbid(),
                 ErrorOr.ErrorType.Failure => BadRequest(apiResponse),
-                _ => StatusCode(500, apiResponse)
+                ErrorOr.ErrorType.Unexpected => StatusCode(StatusCodes.Status500InternalServerError, apiResponse),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, apiResponse)
             };
         }
     }

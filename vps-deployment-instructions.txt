@@ -128,6 +128,20 @@ Authentication__Google__ClientSecret=your_google_client_secret
 * Google Cloud Console Authorized Redirect URI:
   https://barber.devs.surf/signin-google
 
+# Email Configuration (SMTP / Verification Emails)
+# IMPORTANT: Blitz.cloud blocks outbound ports 25, 465, and 587 by default to prevent spam.
+# - If using Gmail SMTP on port 587, request port 587 unblock from Blitz support.
+# - Alternatively, use port 2525 (unblocked by Blitz) with an SMTP relay like Brevo (smtp-relay.brevo.com:2525).
+# - Diagnostic check: Visit /api/health/email to verify outbound TCP connectivity from the container runtime.
+Email__Host=smtp.gmail.com
+Email__Port=587
+Email__SmtpUsername=your_actual_email@gmail.com
+Email__SmtpPassword=your_app_password_without_spaces
+Email__SenderEmail=your_actual_email@gmail.com
+Email__SenderDisplayName=Barber Shop
+Email__EnableSsl=true
+Email__ExpirationMinutes=720
+
 --------------------------------------------------------------------------------
 STEP 5: CONFIGURE CUSTOM DOMAIN & HTTPS (barber.devs.surf)
 --------------------------------------------------------------------------------
@@ -171,10 +185,27 @@ STEP 6: DEPLOY & VERIFY
      Expected: Handled by Google authentication middleware.
 
 --------------------------------------------------------------------------------
-LOCAL DEVELOPMENT WITH DOCKER COMPOSE
+DOCKER COMPOSE & VPS DEPLOYMENT (NGINX + PGADMIN)
 --------------------------------------------------------------------------------
-For local development on your workstation with full Docker Compose:
-  docker compose up --build
-This will run the multi-container stack (`barber-api`, `barber-frontend`,
-`barber-nginx`, `barber-postgres`, `barber-redis`) on http://localhost.
+When running the full multi-container stack with Nginx on a VPS or container host:
+1. Environment Configuration:
+   In `.env`, configure pgAdmin and HTTP Basic Auth credentials:
+   PGADMIN_DEFAULT_EMAIL=admin@barber.local
+   PGADMIN_DEFAULT_PASSWORD=your_strong_pgadmin_password_here
+   PGADMIN_BASIC_AUTH_USER=admin
+   PGADMIN_BASIC_AUTH_PASSWORD=your_strong_pgadmin_password_here
+
+2. Safe Zero-Downtime / Non-Destructive Update:
+   Build and restart only the Nginx and pgAdmin containers without touching databases:
+   docker compose up -d --build nginx pgadmin
+
+3. Access pgAdmin:
+   URL: https://gaber.blitz.cloud/pgadmin/
+   - Layer 1 (Nginx Basic Auth): Enter PGADMIN_BASIC_AUTH_USER & PGADMIN_BASIC_AUTH_PASSWORD
+   - Layer 2 (pgAdmin 4 Login): Enter PGADMIN_DEFAULT_EMAIL & PGADMIN_DEFAULT_PASSWORD
+
+4. Network Security:
+   - pgAdmin port 80 is strictly internal on 'barber-network' and not exposed to the public internet.
+   - All external access goes through Nginx with authentication and reverse-proxy header protections.
 ================================================================================
+

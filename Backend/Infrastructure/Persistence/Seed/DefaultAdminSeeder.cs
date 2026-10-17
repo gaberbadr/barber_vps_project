@@ -72,7 +72,7 @@ namespace Infrastructure.Persistence.Seed
 
                     if (createResult.Succeeded)
                     {
-                        if (admin.Email == "gaberemadbader@gmail.com" || admin.Email == "ahmedmegahed580@gmail.com")
+                        if (admin.Email == "test1@gmail.com" || admin.Email == "ahmedmegahed580@gmail.com")
                         {
                             await userManager.AddToRoleAsync(user, "Spector");
                         }

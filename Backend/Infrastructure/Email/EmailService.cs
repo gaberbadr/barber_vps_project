@@ -9,6 +9,12 @@ namespace Infrastructure.Email
         private readonly SmtpEmailSender _smtpEmailSender;
         private readonly EmailOptions _emailOptions;
 
+        public EmailService(IOptions<EmailOptions> emailOptions, SmtpEmailSender smtpEmailSender)
+        {
+            _emailOptions = emailOptions.Value;
+            _smtpEmailSender = smtpEmailSender;
+        }
+
         public EmailService(IOptions<EmailOptions> emailOptions)
         {
             _emailOptions = emailOptions.Value;

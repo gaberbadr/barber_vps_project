@@ -341,18 +341,91 @@ namespace Infrastructure
             IServiceCollection services,
             IConfiguration configuration)
         {
-            var emailOptions = configuration.GetSection("Email").Get<EmailOptions>();
+            var emailSection = configuration.GetSection("Email").Exists() 
+                ? configuration.GetSection("Email") 
+                : configuration.GetSection("EmailSettings");
 
-            if (emailOptions == null || string.IsNullOrWhiteSpace(emailOptions.SenderEmail))
+            services.Configure<EmailOptions>(options =>
             {
-                return;
-            }
+                if (emailSection.Exists())
+                {
+                    emailSection.Bind(options);
+                }
 
-            services.Configure<EmailOptions>(configuration.GetSection("Email"));
+                // Support common environment variable aliases often used on cloud platforms:
+                var host = configuration["Email__Host"] 
+                    ?? configuration["EmailSettings__Host"] 
+                    ?? configuration["SMTP_HOST"] 
+                    ?? configuration["EMAIL_HOST"]
+                    ?? configuration["Email:Host"];
+                if (!string.IsNullOrWhiteSpace(host)) options.Host = host.Trim();
+
+                var portStr = configuration["Email__Port"] 
+                    ?? configuration["EmailSettings__Port"] 
+                    ?? configuration["SMTP_PORT"] 
+                    ?? configuration["EMAIL_PORT"]
+                    ?? configuration["Email:Port"];
+                if (!string.IsNullOrWhiteSpace(portStr) && int.TryParse(portStr.Trim(), out var port)) options.Port = port;
+
+                var user = configuration["Email__SmtpUsername"] 
+                    ?? configuration["EmailSettings__SmtpUsername"]
+                    ?? configuration["Email__Username"]
+                    ?? configuration["EmailSettings__Username"]
+                    ?? configuration["SMTP_USERNAME"] 
+                    ?? configuration["SMTP_USER"] 
+                    ?? configuration["EMAIL_USERNAME"] 
+                    ?? configuration["EMAIL_USER"]
+                    ?? configuration["Email:SmtpUsername"];
+                if (!string.IsNullOrWhiteSpace(user)) options.SmtpUsername = user.Trim();
+
+                var pass = configuration["Email__SmtpPassword"] 
+                    ?? configuration["EmailSettings__SmtpPassword"]
+                    ?? configuration["Email__Password"]
+                    ?? configuration["EmailSettings__Password"]
+                    ?? configuration["SMTP_PASSWORD"] 
+                    ?? configuration["SMTP_PASS"] 
+                    ?? configuration["EMAIL_PASSWORD"] 
+                    ?? configuration["EMAIL_PASS"]
+                    ?? configuration["Email:SmtpPassword"];
+                if (!string.IsNullOrWhiteSpace(pass)) options.SmtpPassword = pass.Trim();
+
+                var sender = configuration["Email__SenderEmail"] 
+                    ?? configuration["EmailSettings__SenderEmail"]
+                    ?? configuration["Email__From"] 
+                    ?? configuration["EmailSettings__From"] 
+                    ?? configuration["SMTP_FROM"] 
+                    ?? configuration["EMAIL_FROM"] 
+                    ?? configuration["EMAIL_SENDER"] 
+                    ?? configuration["SENDER_EMAIL"]
+                    ?? configuration["Email:SenderEmail"];
+                if (!string.IsNullOrWhiteSpace(sender)) options.SenderEmail = sender.Trim();
+
+                var displayName = configuration["Email__SenderDisplayName"] 
+                    ?? configuration["EmailSettings__SenderDisplayName"]
+                    ?? configuration["Email__DisplayName"] 
+                    ?? configuration["EmailSettings__DisplayName"] 
+                    ?? configuration["SMTP_DISPLAY_NAME"] 
+                    ?? configuration["EMAIL_DISPLAY_NAME"]
+                    ?? configuration["Email:SenderDisplayName"];
+                if (!string.IsNullOrWhiteSpace(displayName)) options.SenderDisplayName = displayName.Trim();
+
+                var sslStr = configuration["Email__EnableSsl"] 
+                    ?? configuration["EmailSettings__EnableSsl"]
+                    ?? configuration["SMTP_SSL"] 
+                    ?? configuration["EMAIL_SSL"]
+                    ?? configuration["Email:EnableSsl"];
+                if (!string.IsNullOrWhiteSpace(sslStr) && bool.TryParse(sslStr.Trim(), out var ssl)) options.EnableSsl = ssl;
+
+                var expStr = configuration["Email__ExpirationMinutes"] 
+                    ?? configuration["EmailSettings__ExpirationMinutes"]
+                    ?? configuration["Email:ExpirationMinutes"];
+                if (!string.IsNullOrWhiteSpace(expStr) && int.TryParse(expStr.Trim(), out var exp)) options.ExpirationMinutes = exp;
+            });
 
             services.AddScoped<IEmailConfiguration>(provider => 
                 provider.GetRequiredService<IOptions<EmailOptions>>().Value);
 
+            services.AddScoped<SmtpEmailSender>();
             services.AddScoped<IEmailSender, EmailService>();
         }
 

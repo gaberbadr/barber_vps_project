@@ -1,9 +1,17 @@
+using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
+using Infrastructure.Email;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace Controllers
 {
-     [ApiController]
+    [ApiController]
     [Route("")]
     [ApiExplorerSettings(IgnoreApi = true)]
     public class HomeController : ControllerBase
@@ -20,7 +28,9 @@ namespace Controllers
                 endpoints = new
                 {
                     swagger = $"{Request.Scheme}://{Request.Host}/swagger",
-                    health = $"{Request.Scheme}://{Request.Host}/health"
+                    health = $"{Request.Scheme}://{Request.Host}/health",
+                    dbHealth = $"{Request.Scheme}://{Request.Host}/api/health/db",
+                    emailHealth = $"{Request.Scheme}://{Request.Host}/api/health/email"
                 },
                 timestamp = DateTime.UtcNow
             });
@@ -71,6 +81,69 @@ namespace Controllers
                     message = "Failed to connect to configured PostgreSQL server. Verify DATABASE_URL in Blitz dashboard.",
                     timestamp = DateTime.UtcNow
                 });
+            }
+        }
+
+        [HttpGet("api/health/email")]
+        public async Task<IActionResult> CheckEmailHealth([FromServices] IOptions<EmailOptions> emailOptionsAccessor)
+        {
+            var options = emailOptionsAccessor.Value;
+            var host = string.IsNullOrWhiteSpace(options.Host) ? "smtp.gmail.com" : options.Host;
+            var port = options.Port > 0 ? options.Port : 587;
+            var isConfigured = !string.IsNullOrWhiteSpace(options.SmtpUsername) &&
+                               options.SmtpUsername != "your_email@gmail.com" &&
+                               !string.IsNullOrWhiteSpace(options.SmtpPassword) &&
+                               options.SmtpPassword != "your_email_password";
+
+            var result = new Dictionary<string, object>
+            {
+                ["host"] = host,
+                ["port"] = port,
+                ["enableSsl"] = options.EnableSsl,
+                ["isConfigured"] = isConfigured,
+                ["senderConfigured"] = !string.IsNullOrWhiteSpace(options.SenderEmail) && options.SenderEmail != "your_email@gmail.com",
+                ["timestamp"] = DateTime.UtcNow
+            };
+
+            // 1. Check DNS resolution
+            try
+            {
+                var addresses = await Dns.GetHostAddressesAsync(host);
+                result["dnsResolution"] = "Success";
+                result["resolvedIpCount"] = addresses.Length;
+            }
+            catch (Exception ex)
+            {
+                result["dnsResolution"] = "Failed";
+                result["dnsError"] = ex.Message;
+                result["status"] = "Unhealthy";
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, result);
+            }
+
+            // 2. Check outbound TCP connectivity with a 5-second timeout
+            try
+            {
+                using var tcpClient = new TcpClient();
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                await tcpClient.ConnectAsync(host, port, cts.Token);
+                result["tcpConnection"] = "Connected";
+                result["status"] = isConfigured ? "Healthy" : "Degraded (Credentials not configured)";
+                return Ok(result);
+            }
+            catch (OperationCanceledException)
+            {
+                result["tcpConnection"] = "TimedOut";
+                result["status"] = "Unhealthy";
+                result["diagnosticDetail"] = $"Outbound TCP connection to {host}:{port} timed out after 5 seconds. Blitz.cloud blocks outbound ports 25, 465, and 587. Consider using port 2525 or a transactional email HTTP API (e.g. Brevo/Resend).";
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, result);
+            }
+            catch (Exception ex)
+            {
+                result["tcpConnection"] = "Failed";
+                result["tcpError"] = ex.Message;
+                result["status"] = "Unhealthy";
+                result["diagnosticDetail"] = $"Outbound TCP connection to {host}:{port} failed: {ex.Message}. Blitz.cloud blocks outbound ports 25, 465, and 587. Consider using port 2525 or a transactional email HTTP API.";
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, result);
             }
         }
     }
