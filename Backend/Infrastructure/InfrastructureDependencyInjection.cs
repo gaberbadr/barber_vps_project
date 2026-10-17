@@ -57,16 +57,41 @@ namespace Infrastructure
             IServiceCollection services,
             IConfiguration configuration)
         {
-            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            var rawConnectionString = configuration.GetConnectionString("DefaultConnection")
+                ?? configuration["DATABASE_URL"]
+                ?? configuration.GetConnectionString("DATABASE_URL");
 
-            if (string.IsNullOrWhiteSpace(connectionString))
+            if (string.IsNullOrWhiteSpace(rawConnectionString))
                 throw new InvalidOperationException(
                     "DefaultConnection is not configured.");
+
+            var connectionString = FormatPostgresConnectionString(rawConnectionString);
 
             services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseNpgsql(connectionString);
             });
+        }
+
+        private static string FormatPostgresConnectionString(string connectionString)
+        {
+            if (connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
+                connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+            {
+                var uri = new Uri(connectionString);
+                var userInfo = uri.UserInfo?.Split(':');
+                var builder = new Npgsql.NpgsqlConnectionStringBuilder
+                {
+                    Host = uri.Host,
+                    Port = uri.Port > 0 ? uri.Port : 5432,
+                    Username = userInfo != null && userInfo.Length > 0 ? userInfo[0] : "",
+                    Password = userInfo != null && userInfo.Length > 1 ? userInfo[1] : "",
+                    Database = uri.AbsolutePath.TrimStart('/'),
+                    SslMode = Npgsql.SslMode.Prefer
+                };
+                return builder.ToString();
+            }
+            return connectionString;
         }
 
         private static void AddUnitOfWork(IServiceCollection services)
@@ -86,7 +111,7 @@ namespace Infrastructure
                 configuration.GetSection("CacheSettings:Redis"));
 
             // If Redis is disabled, register null connection multiplexer
-            // RateLimitService will handle gracefully with in-memory fallback
+            // RateLimitService and RedisCacheService will handle gracefully with in-memory fallback
             if (!redisOptions.Enabled)
             {
                 services.AddSingleton<IConnectionMultiplexer?>(sp => null);
@@ -124,38 +149,45 @@ namespace Infrastructure
                 {
                     var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("Redis.Configuration");
                     
-                    var uri = new Uri(connectionString);
-
-                    var options = new ConfigurationOptions
+                    ConfigurationOptions options;
+                    if (connectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) ||
+                        connectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
                     {
-                        AbortOnConnectFail = false,
-                        Ssl = true,
-                        ConnectRetry = 3,
-                        ConnectTimeout = redisOptions.ConnectTimeoutMs,
-                        SyncTimeout = redisOptions.SyncTimeoutMs,
-                        KeepAlive = 180
-                    };
+                        var uri = new Uri(connectionString);
+                        options = new ConfigurationOptions
+                        {
+                            AbortOnConnectFail = false,
+                            Ssl = connectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase),
+                            ConnectRetry = 3,
+                            ConnectTimeout = redisOptions.ConnectTimeoutMs,
+                            SyncTimeout = redisOptions.SyncTimeoutMs,
+                            KeepAlive = 180
+                        };
+                        options.EndPoints.Add(uri.Host, uri.Port > 0 ? uri.Port : 6379);
 
-                    options.EndPoints.Add(uri.Host, uri.Port);
-
-                    var userInfo = uri.UserInfo?.Split(':', 2);
-                    if (userInfo?.Length == 2)
-                    {
-                        options.User = userInfo[0];
-                        options.Password = userInfo[1];
+                        var userInfo = uri.UserInfo?.Split(':', 2);
+                        if (userInfo?.Length == 2)
+                        {
+                            options.User = userInfo[0];
+                            options.Password = userInfo[1];
+                        }
                     }
-                    else if (!string.IsNullOrWhiteSpace(uri.UserInfo))
+                    else
                     {
-                        logger.LogWarning(
-                            "Redis connection string is malformed (missing user credentials). " +
-                            "Expected format: redis://username:password@host:port");
+                        // Standard host:port format (e.g. "redis:6379")
+                        options = ConfigurationOptions.Parse(connectionString);
+                        options.AbortOnConnectFail = false;
+                        options.ConnectRetry = 3;
+                        options.ConnectTimeout = redisOptions.ConnectTimeoutMs;
+                        options.SyncTimeout = redisOptions.SyncTimeoutMs;
+                        options.KeepAlive = 180;
                     }
 
                     var connection = ConnectionMultiplexer.Connect(options);
                     
                     if (connection.IsConnected)
                     {
-                        logger.LogInformation("Successfully connected to Redis at {Host}:{Port}", uri.Host, uri.Port);
+                        logger.LogInformation("Successfully connected to Redis at {Endpoints}", string.Join(",", options.EndPoints));
                     }
                     else
                     {

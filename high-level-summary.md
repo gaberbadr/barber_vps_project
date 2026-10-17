@@ -2,61 +2,57 @@
 
 Here is a complete, high-level summary of your entire production architecture and how everything flows together.
 
-## 1. The Containers (The "Images")
-Your application is broken down into 6 isolated containers running inside a private Docker network (`barber-network`):
+## 1. The Containers (The "Services")
+Your application is broken down into isolated services running inside a private Docker network (`barber-network`):
 
-- **Frontend (`barber-frontend`)**: A lightweight Nginx alpine image that simply serves your built React files.
+- **Frontend (`barber-frontend`)**: A lightweight Nginx alpine image that serves your built React SPA.
 - **Backend (`barber-api`)**: Your ASP.NET Core API running on a Linux .NET 8 runtime.
-- **Database (`barber-sql`)**: Microsoft SQL Server 2022. It saves its data persistently to a Docker volume so data isn't lost when it restarts.
-- **Cache (`barber-redis`)**: A Redis container used for fast caching (replacing Upstash).
-- **Reverse Proxy (`barber-nginx`)**: The "Main Door" to your application. This is a separate Nginx server that manages all incoming internet traffic.
-- **Certificate Manager (`barber-certbot`)**: A background service that talks to Let's Encrypt to get and renew your SSL certificates.
+- **Database (`barber-postgres`)**: PostgreSQL 16. It saves its data persistently to a Docker volume (`postgres_data`) so data isn't lost across restarts or redeployments.
+- **Cache (`barber-redis`)**: A Redis container used for fast caching and distributed rate limiting (with automatic in-memory fallback).
+- **Reverse Proxy (`barber-nginx`)**: The internal entrypoint for your application. It routes incoming traffic from the Blitz.cloud edge router to the Frontend (`/`), Backend (`/api/`), Swagger (`/swagger/`), Uploads (`/files/`), and Health Check (`/health`).
+- **Database Administration (`barber-pgadmin`)**: pgAdmin 4 for administrative operations, bound locally for security.
 
-## 2. The Configuration Flow (The `.env` file)
-We designed the system so that the `.env` file is the absolute single source of truth for your entire server.
+## 2. The Configuration Flow (Environment Variables)
+Configuration is managed through environment variables (set in Blitz.cloud dashboard or `.env` file):
 
-- **The Backend**: In `docker-compose.yml`, we use `env_file: - .env` for the backend. When the backend starts, Docker takes every single variable in that file and injects it as an Environment Variable. Because ASP.NET understands the double underscore (`__`), it automatically overwrites any matching setting in `appsettings.json` (like `JWT__Key` or `Email__Host`).
-- **The Database**: Docker reads `DB_PASSWORD` from `.env` and uses it to set the `SA_PASSWORD` when creating the SQL Server.
-- **The Frontend**: The frontend is just static HTML/JS files in production, so it does not read the `.env` file. Instead, we designed it to simply make requests to `/api`.
+- **The Backend**: Docker/Blitz.cloud injects variables into the backend. Because ASP.NET understands double underscores (`__`), it automatically overrides matching configuration in `appsettings.json` (such as `JWT__Key` or `ConnectionStrings__DefaultConnection`).
+- **The Database**: Docker reads `DB_PASSWORD` and uses it to configure PostgreSQL authentication.
+- **The Frontend**: The frontend is built as static HTML/JS/CSS assets that send requests to `/api`.
 
-## 3. The Traffic Flow (Nginx)
-Because of our strict security rule, Nginx is the ONLY container exposed to the public internet (Ports 80 and 443). The Backend, Database, and Redis are completely hidden inside the Docker network.
+## 3. The Traffic Flow (Blitz.cloud Edge + Nginx)
+Security and routing flow:
 
 When a user visits `https://barber.devs.surf`:
-1. The request hits your VPS on port 443.
-2. Nginx intercepts the request.
-3. If the request is for the main website (e.g., `/` or `/about`), Nginx forwards it internally to the Frontend container.
-4. If the request starts with `/api` (e.g., `/api/auth/login`), Nginx forwards it internally to the Backend container (`http://backend:8080/api/`).
-5. If the request starts with `/files` (e.g., an uploaded image), Nginx forwards it internally to the Backend container, which serves the image from the local Docker volume.
+1. The request hits Blitz.cloud's managed edge reverse proxy on port 443.
+2. Blitz.cloud terminates TLS/HTTPS using its automatically managed Let's Encrypt certificate and injects `X-Forwarded-Proto: https`.
+3. Blitz.cloud forwards the request to your `barber-nginx` container on port 80.
+4. Nginx inspects the route:
+   - If the request is for `/` or frontend pages, Nginx proxies it to the Frontend container.
+   - If the request starts with `/api/`, Nginx proxies it to `http://backend:8080/api/`.
+   - If the request starts with `/files/`, Nginx proxies it to `http://backend:8080/files/`.
+   - If the request starts with `/swagger/`, Nginx proxies it to `http://backend:8080/swagger/`.
+   - If the request is `/health`, Nginx proxies it to `http://backend:8080/health`.
 
-This completely eliminates CORS issues because, to the user's browser, the frontend and backend appear to be on the exact same server!
+This completely eliminates CORS issues because the browser interacts with the exact same domain for both frontend and backend.
 
-## 4. The Certificate & SSL Flow (Nginx + Certbot)
-Nginx and Certbot have a "chicken and egg" relationship:
-- Nginx refuses to start without an SSL certificate.
-- Certbot cannot get an SSL certificate from Let's Encrypt unless Nginx is already running to prove you own the domain.
+## 4. The Certificate & SSL Flow (Managed Edge HTTPS)
+On Blitz.cloud, SSL management is fully automated at the edge:
+- Blitz.cloud provisions and renews valid Let's Encrypt certificates automatically for `barber.devs.surf` and any `*.blitz.cloud` subdomains.
+- No in-container Certbot loops, manual scripts (`init-letsencrypt.sh`), or local certificate files are required.
+- Nginx starts instantly on port 80 without any chicken-and-egg startup dependency.
 
-**The Script (`init-letsencrypt`)**: To solve this, you run the initialization script once. The script dynamically reads your domain and email from the `.env` file. It creates a fake, temporary certificate, uses it to start Nginx, and then asks Certbot to replace the fake certificate with a real, valid one.
+## 5. Startup & Dependency Flow
+When Docker starts the project:
+1. `db` (PostgreSQL) and `redis` boot up first.
+2. PostgreSQL runs a healthcheck (`pg_isready -U postgres -d project1`).
+3. `backend` waits for `db` to be healthy before starting.
+4. On startup, `backend` automatically applies pending EF Core migrations (`context.Database.MigrateAsync()`) and seeds default roles and admin data.
+5. `frontend` starts up.
+6. `nginx` starts up once `backend` and `frontend` are ready, beginning to accept traffic on port 80.
 
-**The Automation**: Once it is running, you never have to touch it again.
-- The Certbot container runs a loop that wakes up every 12 hours. If your certificate has less than 30 days remaining, it quietly downloads a new one to a shared folder.
-- The Nginx container runs a loop that wakes up every 6 hours and reloads its configuration. If a new certificate was downloaded by Certbot, Nginx loads it into memory without dropping any active user connections.
-
-## 5. Dependencies (What depends on what?)
-When you run `docker compose up -d`, Docker starts things in a very specific, calculated order:
-
-1. Database & Redis start first.
-2. The Database runs a health check every 15 seconds to see if it has finished booting up.
-3. The Backend is explicitly configured to wait. It will not start until the Database health check reports "Healthy". This prevents the backend from crashing due to a missing database.
-4. The Frontend starts instantly.
-5. Nginx is configured to wait. It will not start until both the Backend and Frontend are running, ensuring it doesn't try to route traffic to a container that doesn't exist yet.
-
-## 6. Where does the Frontend get its Base URL?
-This is actually the smartest part of the Docker architecture we've set up! The frontend doesn't need to be hardcoded with a domain like `barber.devs.surf` at all. 
-
-Here is exactly how it works: 
-- **The Fallback**: Inside `FrontEnd/src/api/axiosInstance.ts`, the code is written as: `baseURL: import.meta.env.VITE_API_BASE_URL || '/api'` 
-- **The Build**: Because you are building the frontend inside Docker, we don't pass `VITE_API_BASE_URL`. So the frontend automatically falls back to just using `'/api'`. 
-- **The Magic (Nginx)**: When a user visits your site and their browser tries to login, the frontend sends the network request to `barber.devs.surf/api/auth/login`. Nginx sits in front of everything. It intercepts that request, sees the `/api` at the beginning, and instantly says: *"Ah, this is meant for the backend!"* and forwards it internally directly to `http://backend:8080`. 
-
-**Why this is great**: You never have to deal with CORS errors again because the browser thinks the frontend and backend are on the exact same domain. If you change your domain name tomorrow, you don't have to rebuild the frontend or change any environment variables. It will just continue working!
+## 6. Frontend Base URL & Same-Origin Routing
+- In `FrontEnd/src/api/axiosInstance.ts`, the API base URL is:
+  `baseURL: import.meta.env.VITE_API_BASE_URL || '/api'`
+- In production, it defaults to `/api`.
+- Nginx intercepts all `/api` requests and forwards them to `http://backend:8080/api/`.
+- This ensures full portability: if the domain changes, no frontend rebuild or environment variable modification is required.

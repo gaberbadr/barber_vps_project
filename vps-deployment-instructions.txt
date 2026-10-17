@@ -1,96 +1,353 @@
-==================================================
-VPS DEPLOYMENT & DNS INSTRUCTIONS
-==================================================
+================================================================================
+BLITZ.CLOUD PRODUCTION DEPLOYMENT & VERIFICATION GUIDE
+================================================================================
+Project: Barber Management System
+Domain: barber.devs.surf
+Platform: Blitz.cloud (European Container & App Cloud Platform)
 
---------------------------------------------------
-PART 1: DNS CONFIGURATION
---------------------------------------------------
-Go to your domain provider (where you manage barber.devs.surf) and create/update the DNS record with these exact details:
+--------------------------------------------------------------------------------
+TABLE OF CONTENTS
+--------------------------------------------------------------------------------
+1. Architecture Overview & Blitz.cloud Capabilities
+2. Prerequisites & GitHub Repository Setup
+3. DNS Configuration (Custom Domain barber.devs.surf)
+4. Blitz.cloud Application Creation & Setup
+5. Environment Variables Specification
+6. Service Communications & Networking
+7. Database Migrations & Initial Data Seeding
+8. Persistent Volumes & Data Preservation
+9. Automated Deployment & Git Push Lifecycle
+10. End-to-End Verification Procedure
+11. Troubleshooting Guide
+12. Backup, Recovery & Maintenance
 
-- TYPE: A
-- NAME: @
-- CONTENT: <Enter the Public IP Address of your VPS here (e.g. 157.23.45.101)>
-- TTL: 3600
+================================================================================
+1. ARCHITECTURE OVERVIEW & BLITZ.CLOUD CAPABILITIES
+================================================================================
+The project is organized as a multi-service Docker architecture deployed via
+Blitz.cloud's GitHub integration and managed edge infrastructure:
 
-Note: If your dashboard is managing the root "devs.surf" domain, you might need to put "barber" in the NAME field instead of "@". If the dashboard is specifically for "barber.devs.surf", then use "@". 
+- Ingress & TLS Termination:
+  Managed directly by Blitz.cloud's edge router (edge.blitz.cloud).
+  TLS/HTTPS certificates are issued and auto-renewed via Let's Encrypt at the edge.
+  The containerized Nginx instance listens internally on HTTP port 80 and accepts
+  forwarded HTTPS traffic without requiring local certificate files or in-container
+  Certbot loops.
 
---------------------------------------------------
-PART 2: THE 5 STEPS TO DEPLOY ON VPS
---------------------------------------------------
-Once your DNS is pointing to your VPS, log into your VPS terminal and follow these steps:
+- Services:
+  * barber-nginx (Nginx Alpine): Public-facing reverse proxy routing traffic to
+    frontend (/), backend (/api/), swagger (/swagger/), uploads (/files/), and /health.
+  * barber-frontend (React Vite SPA on Nginx): Production static SPA build.
+  * barber-api (.NET 8 Web API): Business logic, EF Core, Identity, authentication.
+  * barber-postgres (PostgreSQL 16 Alpine): Relational persistence.
+  * barber-redis (Redis Alpine): In-memory cache & rate limiting with fallback.
+  * barber-pgadmin (pgAdmin 4): Database management (isolated to loopback).
 
-STEP 1: GET YOUR CODE ON THE VPS
-Push your code to a Git repository (like GitHub/GitLab) and pull it onto your VPS, or upload the files directly via SFTP. Navigate into the project folder.
+- Private Network:
+  All services communicate over the internal Docker network "barber-network".
+  PostgreSQL, Redis, Backend, and Frontend are not exposed to the public internet;
+  only Nginx is exposed on port 80 to the Blitz.cloud edge router.
 
-STEP 2: CREATE THE .ENV FILE
-Run this command to copy the example configuration:
-cp .env.example .env
+================================================================================
+2. PREREQUISITES & GITHUB REPOSITORY SETUP
+================================================================================
+1. Git Repository:
+   Push the latest commit of this repository to GitHub (public or private):
+   - Branch: main (or your preferred release branch)
+   - Ensure .env is NOT committed to Git (.gitignore protects it).
 
-STEP 3: ADD YOUR REAL SECRETS
-Open the `.env` file you just created and fill in your real, secure passwords. Make sure to update:
-- DB_PASSWORD
-- ConnectionStrings__DefaultConnection (update the password here too)
-- JWT__Key
-- Email__SmtpPassword
-- Authentication__Google__ClientId
-- Authentication__Google__ClientSecret
-- CERTBOT_EMAIL
-- PGADMIN_DEFAULT_EMAIL (Admin email for pgAdmin 4)
-- PGADMIN_DEFAULT_PASSWORD (Strong password for pgAdmin 4)
-- PGADMIN_HOST_PORT (Host port, default 5050 bound to 127.0.0.1)
+2. Blitz.cloud Account:
+   - Sign up / log in at https://dashboard.blitz.cloud/
+   - Connect your GitHub account via Settings -> Connected Accounts -> GitHub.
+   - Grant repository read access to the project repository.
 
-STEP 4: PROVISION SSL CERTIFICATES
-Run the Let's Encrypt initialization script to get your HTTPS certificates.
+================================================================================
+3. DNS CONFIGURATION (CUSTOM DOMAIN: barber.devs.surf)
+================================================================================
+Configure the following records in your DNS manager (Cloudflare, Namecheap, GoDaddy):
 
-IF YOUR VPS IS LINUX (Most Common):
-Run these two commands in the terminal:
-chmod +x init-letsencrypt.sh
-./init-letsencrypt.sh
+1. Primary Routing Record (CNAME):
+   - Type: CNAME
+   - Name: barber (or barber.devs.surf depending on DNS provider interface)
+   - Target: edge.blitz.cloud
+   - TTL: Auto or 3600
+   * Cloudflare Notice: If using Cloudflare DNS, set the Proxy status to
+     "DNS Only" (Grey Cloud) so Blitz.cloud can directly complete the ACME HTTP-01
+     challenge for SSL certificate issuance.
 
-IF YOUR VPS IS WINDOWS SERVER:
-Run this command in PowerShell:
-.\init-letsencrypt.ps1
+2. Ownership Verification Record (TXT) (If required by Blitz.cloud):
+   - Type: TXT
+   - Name: _blitz-verify.barber
+   - Value: <Copy verification token provided in Blitz.cloud Domains tab>
+   - TTL: Auto or 3600
 
-STEP 5: START THE FULL PROJECT
-Once the certificates are generated, start all the containers in the background:
-docker compose up -d --build
+================================================================================
+4. BLITZ.CLOUD APPLICATION CREATION & SETUP
+================================================================================
+1. Open Blitz.cloud Dashboard:
+   - Click "Host something new".
+   - Select "My own code".
+   - Choose your connected GitHub repository and select the target branch (main).
 
-Done! Your website is now live at https://barber.devs.surf.
+2. Build Configuration:
+   - Blitz.cloud detects docker-compose.yml in the repository root.
+   - Set the Application Name / Subdomain (e.g., "barber").
+   - Exposed Port: Port 80 (Nginx reverse proxy).
 
---------------------------------------------------
-PART 3: POSTGRESQL ADMINISTRATION (PGADMIN 4)
---------------------------------------------------
-pgAdmin 4 is configured as a dedicated container (`barber-pgadmin`) connected directly to the internal Docker network (`barber-network`).
+3. Custom Domain Association:
+   - Navigate to the "Domains" tab in your application dashboard.
+   - Click "Connect a domain" and enter "barber.devs.surf".
+   - Blitz.cloud will automatically verify the CNAME/TXT records and request the
+     Let's Encrypt certificate at the edge router.
 
-1. SECURITY & ACCESS:
-   pgAdmin is intentionally bound to `127.0.0.1:5050` on the VPS host to prevent public internet exposure.
-   To securely access pgAdmin from your local machine, open an SSH tunnel:
-   
-   ssh -L 5050:localhost:5050 user@your_vps_ip
+================================================================================
+5. ENVIRONMENT VARIABLES SPECIFICATION
+================================================================================
+Configure the following variables in the Blitz.cloud dashboard (under Settings ->
+Environment Variables). Values are encrypted by Blitz.cloud before storage.
 
-   Once the tunnel is active, navigate to:
-   http://localhost:5050
+[DATABASE CREDENTIALS]
+- DB_PASSWORD (Secret)
+  Purpose: Master password for PostgreSQL "postgres" superuser.
+  Example: S3cur3_P0stgr3s_P@ssw0rd!
 
-2. LOGIN CREDENTIALS:
-   Log in with the credentials set in your `.env` file:
-   - Email: Value of PGADMIN_DEFAULT_EMAIL (e.g. admin@barber.local)
-   - Password: Value of PGADMIN_DEFAULT_PASSWORD
+- ConnectionStrings__DefaultConnection (Secret)
+  Purpose: ADO.NET connection string used by EF Core in .NET.
+  Format: Host=db;Port=5432;Database=project1;Username=postgres;Password=S3cur3_P0stgr3s_P@ssw0rd!
 
-3. REGISTERING THE POSTGRESQL SERVER:
-   Inside the pgAdmin interface, click "Add New Server" and fill in:
-   - General Tab:
-     - Name: Barber PostgreSQL
-   - Connection Tab:
-     - Host name/address: db
-     - Port: 5432
-     - Maintenance database: project1
-     - Username: postgres
-     - Password: <Value of DB_PASSWORD from .env>
-     - Save Password: Check if desired
+[CACHE & REDIS]
+- ConnectionStrings__REDIS_URL (Non-Secret)
+  Purpose: Connection string for Redis cache service.
+  Format: redis:6379
 
-   IMPORTANT: Do NOT use "localhost" as the host name inside pgAdmin. "db" is the internal Docker service name.
+- CacheSettings__Redis__Enabled (Non-Secret)
+  Purpose: Toggles Redis distributed caching.
+  Format: true (or false to use internal in-memory cache)
 
-4. PERSISTENCE & LIFECYCLE:
-   - All server registrations, preferences, and query history persist in the Docker named volume `pgadmin_data`.
-   - To restart pgAdmin: docker compose restart pgadmin
-   - To view pgAdmin logs: docker compose logs -f pgadmin
+- CacheSettings__Redis__DefaultExpirationMinutes (Non-Secret)
+  Purpose: Cache TTL in minutes. Default: 1
+
+- CacheSettings__Redis__ConnectTimeoutMs (Non-Secret)
+  Purpose: Connection timeout in ms. Default: 10000
+
+- CacheSettings__Redis__SyncTimeoutMs (Non-Secret)
+  Purpose: Synchronous operation timeout in ms. Default: 10000
+
+[SECURITY & AUTHENTICATION]
+- JWT__Key (Secret)
+  Purpose: Symmetric secret key for signing JWT bearer tokens (min 32 chars).
+  Example: Super_Secret_JWT_Key_Replace_With_Random_64_Chars_Length!
+
+- JWT__Issuer (Non-Secret)
+  Purpose: Token issuer identifier.
+  Format: https://barber.devs.surf/api
+
+- JWT__Audience (Non-Secret)
+  Purpose: Token audience identifier.
+  Format: project1
+
+- JWT__AccessTokenExpirationMinutes (Non-Secret)
+  Purpose: Lifetime of access tokens. Default: 15
+
+- JWT__RefreshTokenExpirationDays (Non-Secret)
+  Purpose: Lifetime of refresh tokens. Default: 7
+
+[EMAIL SERVICE]
+- Email__Host (Non-Secret): SMTP server hostname (e.g. smtp.gmail.com)
+- Email__Port (Non-Secret): SMTP port (e.g. 587)
+- Email__SmtpUsername (Non-Secret): SMTP login email account
+- Email__SmtpPassword (Secret): SMTP application password
+- Email__SenderEmail (Non-Secret): "From" email address
+- Email__SenderDisplayName (Non-Secret): Friendly sender display name
+- Email__EnableSsl (Non-Secret): true
+- Email__ExpirationMinutes (Non-Secret): 720
+
+[EXTERNAL OAUTH (GOOGLE)]
+- Authentication__Google__ClientId (Non-Secret): Google OAuth 2.0 Client ID
+- Authentication__Google__ClientSecret (Secret): Google OAuth 2.0 Client Secret
+
+[RATE LIMITING POLICIES]
+- RateLimiting__Authenticated__Requests: 100
+- RateLimiting__Authenticated__WindowSeconds: 60
+- RateLimiting__Anonymous__Requests: 30
+- RateLimiting__Anonymous__WindowSeconds: 60
+- RateLimiting__Global__Requests: 1000
+- RateLimiting__Global__WindowSeconds: 60
+- RateLimiting__ExcludedPaths__0: /health
+- RateLimiting__ExcludedPaths__1: /swagger
+- RateLimiting__ExcludedPaths__2: /.well-known
+- RateLimiting__ExcludedPaths__3: /metrics
+- RateLimiting__ClientIdCookieName: X-Client-Id
+- RateLimiting__ClientIdCookieExpirationDays: 30
+- LoginRateLimiter__MaxAttempts: 5
+- LoginRateLimiter__AttemptWindowMinutes: 15
+- LoginRateLimiter__BanDurationHours: 3
+
+[APPLICATION BASE URLS & CORS]
+- BaseURL: https://barber.devs.surf/api
+- Frontend__AllowedBaseUrls__0: http://barber.devs.surf
+- Frontend__AllowedBaseUrls__1: https://barber.devs.surf
+- DOMAIN: barber.devs.surf
+
+[PGADMIN 4 (DATABASE GUI)]
+- PGADMIN_DEFAULT_EMAIL (Non-Secret): Admin email for pgAdmin UI (e.g. admin@barber.local)
+- PGADMIN_DEFAULT_PASSWORD (Secret): Strong admin password for pgAdmin UI
+- PGADMIN_HOST_PORT (Non-Secret): 5050 (bound to 127.0.0.1 on the host)
+
+================================================================================
+6. SERVICE COMMUNICATIONS & NETWORKING
+================================================================================
+- Inbound Traffic Flow:
+  1. Client sends request to https://barber.devs.surf/
+  2. Blitz.cloud edge proxy terminates TLS, applies managed SSL certificate, and
+     injects X-Forwarded-Proto: https, X-Forwarded-For, and Host headers.
+  3. Blitz.cloud edge forwards request to barber-nginx container on port 80.
+  4. Nginx inspects the request path:
+     * /health    -> http://backend:8080/health (Backend health probe)
+     * /api/*     -> http://backend:8080/api/* (Backend ASP.NET Core API)
+     * /files/*   -> http://backend:8080/files/* (Static user uploads)
+     * /swagger/* -> http://backend:8080/swagger/* (OpenAPI Documentation)
+     * /*         -> http://frontend:80/* (React Vite SPA)
+  5. The backend trusts X-Forwarded-Proto via UseForwardedHeaders middleware,
+     avoiding conflicting redirect loops.
+
+================================================================================
+7. DATABASE MIGRATIONS & INITIAL DATABASE SETUP
+================================================================================
+Database lifecycle is completely automated inside the backend's startup pipeline:
+1. Docker Compose healthcheck on "db" verifies PostgreSQL is healthy using:
+   pg_isready -U postgres -d project1
+2. The "backend" container waits until the database healthcheck is healthy before booting.
+3. On application boot, Program.cs executes:
+   - Database Migration: await context.Database.MigrateAsync() applies all pending
+     EF Core migrations in sequential order.
+   - Roles Seeding: DefaultRolesSeeder seeds required identity roles (Admin, Barber, Customer).
+   - Admin Seeding: DefaultAdminSeeder seeds default system administrator credentials.
+   - Data Seeding: DatabaseSeeder seeds working hours, initial services, coupons,
+     and booking settings.
+4. No manual migration commands or database initialization scripts are required.
+
+================================================================================
+8. PERSISTENT VOLUMES & DATA PRESERVATION
+================================================================================
+Data persists across container restarts, image rebuilds, and code pushes via
+named Docker volumes declared in docker-compose.yml:
+
+1. postgres_data (/var/lib/postgresql/data):
+   Stores all relational database tables, identity accounts, bookings, and logs.
+2. api_files (/app/wwwroot/files):
+   Stores user-uploaded profile pictures, barber images, and service attachments.
+3. redis_data (/data):
+   Stores Redis state snapshots (if persistence is enabled).
+4. pgadmin_data (/var/lib/pgadmin):
+   Stores pgAdmin preferences, saved server connections, and query history.
+
+Redeploying new commits to Blitz.cloud does NOT overwrite named volumes.
+Your data remains intact across deployments.
+
+================================================================================
+9. AUTOMATED DEPLOYMENT & GIT PUSH LIFECYCLE
+================================================================================
+1. Making Code Updates:
+   - Make your code changes locally.
+   - Commit and push to your connected GitHub branch:
+     git add .
+     git commit -m "Update feature XYZ"
+     git push origin main
+
+2. Blitz.cloud Continuous Deployment:
+   - Blitz.cloud webhook detects the new commit automatically.
+   - A fresh build is queued and built in an isolated sandbox.
+   - Zero-Downtime Rollout: The currently running application stays online until
+     the new build finishes and passes health checks.
+   - If a build fails, the previous version remains online and the build log
+     in the Activity tab highlights the specific error.
+
+================================================================================
+10. END-TO-END VERIFICATION PROCEDURE
+================================================================================
+After deployment reports "Online" in Blitz.cloud:
+
+Step 1: Verify HTTPS & Certificate
+- Navigate to: https://barber.devs.surf/
+- Verify that the padlock icon is locked and secure.
+- Click the padlock to inspect certificate details:
+  * Issuer: Let's Encrypt (e.g. R10 / E1)
+  * Subject: barber.devs.surf
+  * Validity: 90 days with automatic renewal
+
+Step 2: Verify Health Check Endpoint
+- Navigate to: https://barber.devs.surf/health
+- Expected response:
+  HTTP 200 OK
+  {"status":"Healthy","timestamp":"2026-xx-xxT...","environment":"Production"}
+
+Step 3: Verify Frontend SPA
+- Open https://barber.devs.surf/
+- Ensure the React UI renders properly, CSS styles and images load without 404s.
+- Navigate to client-side routes (e.g. /login, /about) to confirm SPA routing works.
+
+Step 4: Verify API & Swagger Documentation
+- Navigate to: https://barber.devs.surf/swagger
+- Ensure the Swagger UI interactive documentation loads.
+- Test an endpoint (e.g. GET /api/services) to confirm API response and database access.
+
+Step 5: Verify HTTPS Redirection
+- Enter http://barber.devs.surf/ in the address bar.
+- Confirm that the browser automatically upgrades to https://barber.devs.surf/
+  without any redirect loops (ERR_TOO_MANY_REDIRECTS).
+
+================================================================================
+11. TROUBLESHOOTING GUIDE
+================================================================================
+1. Problem: "Secure connection is still being set up" / SSL Warning
+   - Cause: DNS records were recently updated or ACME challenge is still validating.
+   - Solution: Verify your CNAME record points to edge.blitz.cloud. If using
+     Cloudflare, verify proxy mode is set to "DNS Only" (Grey Cloud). Allow up
+     to 5 minutes for Let's Encrypt edge provisioning.
+
+2. Problem: "ERR_TOO_MANY_REDIRECTS"
+   - Cause: Nginx or ASP.NET Core redirecting HTTPS requests back to HTTPS.
+   - Solution: Verify nginx.conf contains:
+     map $http_x_forwarded_proto $forwarded_proto { default $http_x_forwarded_proto; '' $scheme; }
+     proxy_set_header X-Forwarded-Proto $forwarded_proto;
+     and that Nginx does not execute unconditional port 80 redirects.
+
+3. Problem: Backend Container Fails Startup ("Starting...")
+   - Cause: Database migration failure or unreached database.
+   - Solution: Check Blitz.cloud Activity/Logs tab for "Startup.DatabaseInitialization".
+     Ensure ConnectionStrings__DefaultConnection exactly matches DB_PASSWORD.
+
+4. Problem: Redis Connection Warnings in Logs
+   - Cause: Redis container booting slower than backend.
+   - Solution: InfrastructureDependencyInjection.cs includes safe connection fallback.
+     Rate limiting and caching automatically switch to thread-safe in-memory
+     storage without crashing the application.
+
+5. Problem: File Uploads Fail (HTTP 413 Payload Too Large)
+   - Solution: Nginx has client_max_body_size set to 20M. Ensure individual
+     uploads do not exceed 20 MB.
+
+================================================================================
+12. BACKUP, RECOVERY & MAINTENANCE
+================================================================================
+1. Database Dumps via Blitz.cloud:
+   - On the Blitz.cloud dashboard, you can download a full PostgreSQL pg_dump
+     snapshot directly under Databases -> "Download a copy".
+   - You can also upload an existing .sql or .dump file when migrating data.
+
+2. pgAdmin Management:
+   - pgAdmin 4 is bound to 127.0.0.1:5050 for security.
+   - If using a private network or SSH tunnel to the host:
+     Login: Value of PGADMIN_DEFAULT_EMAIL
+     Password: Value of PGADMIN_DEFAULT_PASSWORD
+     Host: db (internal Docker network hostname)
+     Port: 5432
+     Database: project1
+     User: postgres
+
+3. Inactivity Sleep Behavior:
+   - On free accounts, Blitz.cloud puts apps to sleep after 30 minutes of no traffic.
+   - The first visitor will experience a 5-10 second cold start while the
+     containers wake up. All subsequent requests respond instantly.
+================================================================================
