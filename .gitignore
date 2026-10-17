@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+appsettings.Development.json
+.env
+.vs/
+*.user
+node_modules/
+dist/
+build/
+.DS_Store
+data/
+certbot/

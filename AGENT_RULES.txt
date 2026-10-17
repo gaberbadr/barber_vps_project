@@ -1,0 +1,907 @@
+# .NET Backend Architecture & AI Engineering Rules
+
+**Version:** 1.0  
+**Purpose:** A reusable engineering blueprint for generating maintainable, secure, and performance-conscious ASP.NET Core backend projects from an empty directory.
+
+## 1. Primary Instructions
+
+This document defines the default architecture and engineering rules for all AI agents working on this project.
+
+Before generating or modifying code, read this document completely and follow its principles.
+
+The objective is not to use as many design patterns as possible. The objective is to build a reliable backend with clear boundaries, protected business rules, efficient database access, predictable errors, good testability, and controlled complexity.
+
+**Mandatory principles:**
+
+- Prefer correctness and maintainability over unnecessary abstraction.
+- Apply Clean Architecture with deliberate dependency direction.
+- Use Domain-Driven Design when the business domain benefits from it.
+- Keep meaningful business rules inside the Domain Model.
+- Use CQRS and handlers to organize application use cases.
+- Use FluentValidation for application input validation.
+- Use AutoMapper only when it provides practical value.
+- Optimize database queries, allocations, response payloads, and external calls.
+- Use asynchronous I/O and cancellation tokens where supported.
+- Use pagination for potentially large collections.
+- Introduce caching, background processing, and distributed infrastructure only when justified.
+- Never claim a build, migration, or deployment succeeded unless it was actually verified.
+
+When a specific project requirement conflicts with a default in this document, follow the explicit requirement and document the trade-off.
+
+---
+
+## 2. Default Technology Choices
+
+Unless the project owner specifies otherwise:
+
+- Use a supported .NET LTS version and compatible ASP.NET Core and EF Core versions.
+- Verify package compatibility and support status before selecting versions.
+- Use C# with nullable reference types enabled.
+- Use ASP.NET Core Web API.
+- Prefer Controllers for conventional HTTP APIs unless Minimal APIs are explicitly requested or are clearly more appropriate.
+- Use Entity Framework Core for relational persistence.
+- Use the database provider specified by the project. SQL Server is only the default when no provider is specified.
+- Use built-in dependency injection, configuration, logging, options, and `IHttpClientFactory`.
+- Use FluentValidation for application-level request/use-case validation.
+- Use MediatR or an equivalent request dispatcher when the benefits justify the dependency.
+- Use AutoMapper for straightforward repetitive mappings when it reduces meaningful duplication.
+- Use Redis only when distributed caching, shared rate limiting, or another concrete requirement justifies it.
+- Use a modular monolith by default. Do not introduce microservices without a real deployment, scaling, ownership, or isolation requirement.
+- Add Docker, API versioning, background-job frameworks, and other packages only when required.
+
+Do not use obsolete packages or invent package versions. Keep dependencies compatible with the chosen .NET runtime.
+
+---
+
+## 3. Clean Architecture
+
+Clean Architecture is primarily about **dependency direction and separation of responsibilities**, not the number of projects or folders.
+
+### 3.1 Dependency Direction
+
+```text
+API ------------------------> Application
+
+API composition root --------> Infrastructure
+
+Infrastructure --------------> Application abstractions
+
+Infrastructure --------------> Domain, when required
+
+Application -----------------> Domain
+
+Domain ----------------------> No outer layers or infrastructure frameworks
+```
+
+The API executable may reference Infrastructure to register implementations during startup. This does not allow Application to depend on Infrastructure.
+
+### 3.2 Domain Layer
+
+The Domain contains:
+
+- Entities and aggregate roots.
+- Value objects.
+- Domain enums.
+- Domain events when useful.
+- Domain-specific exceptions.
+- Business invariants and domain behavior.
+- Domain services when a rule does not naturally belong to one entity or value object.
+
+The Domain must not depend on:
+
+- ASP.NET Core.
+- API controllers or HTTP contracts.
+- Entity Framework Core.
+- Database providers.
+- Redis.
+- Email or SMS providers.
+- Cloud storage SDKs.
+- External HTTP clients.
+- Application handlers.
+- Infrastructure implementations.
+
+The Domain must not perform I/O.
+
+### 3.3 Application Layer
+
+The Application layer contains:
+
+- Commands and queries.
+- Handlers/use cases.
+- Application abstractions and interfaces.
+- Application-level validation.
+- Application DTOs and read models.
+- Mapping configuration when appropriate.
+- Pagination contracts.
+- Result and error abstractions.
+- Pipeline behaviors when needed.
+- Application authorization policies where appropriate.
+
+Application depends on Domain.
+
+Application must not depend on API or Infrastructure implementations.
+
+### 3.4 Infrastructure Layer
+
+Infrastructure contains implementations for:
+
+- EF Core and `DbContext`.
+- Database configurations and migrations.
+- Repository implementations when needed.
+- Cache implementations.
+- Email and messaging providers.
+- File and object storage.
+- External APIs.
+- Authentication-related infrastructure.
+- Background workers and durable job processing.
+- Database seeding and provider-specific logic.
+
+Infrastructure implements abstractions required by Application.
+
+### 3.5 API Layer
+
+API contains:
+
+- Controllers.
+- HTTP request and response contracts.
+- Middleware.
+- HTTP filters when appropriate.
+- Authentication and authorization configuration.
+- Dependency injection composition.
+- Exception-to-HTTP mapping.
+- Serialization and OpenAPI configuration.
+- API-specific configuration.
+
+Controllers must remain thin. They should handle HTTP concerns, invoke application use cases, and return appropriate HTTP responses.
+
+Do not put business workflows, database queries, or third-party integration implementations inside controllers.
+
+---
+
+## 4. Recommended Solution Structure
+
+Use the following as a starting point. Create folders and classes only when they serve a real purpose.
+
+```text
+src/
+  ProductName.Domain/
+    Common/
+      Entity.cs
+      AggregateRoot.cs
+      IDomainEvent.cs
+    Entities/
+    ValueObjects/
+    Enums/
+    DomainEvents/
+    Exceptions/
+
+  ProductName.Application/
+    Abstractions/
+      Persistence/
+      Caching/
+      Email/
+      Files/
+      Security/
+      Time/
+    Common/
+      Behaviors/
+      Errors/
+      Mapping/
+      Pagination/
+      Results/
+    Features/
+      Orders/
+        Commands/
+          CreateOrder/
+            CreateOrderCommand.cs
+            CreateOrderHandler.cs
+            CreateOrderValidator.cs
+        Queries/
+          GetOrderById/
+            GetOrderByIdQuery.cs
+            GetOrderByIdHandler.cs
+        DTOs/
+    DependencyInjection.cs
+
+  ProductName.Infrastructure/
+    Persistence/
+      ApplicationDbContext.cs
+      Configurations/
+      Repositories/
+      Migrations/
+      Seed/
+    Caching/
+    Authentication/
+    Email/
+    Files/
+    ExternalServices/
+    BackgroundJobs/
+    DependencyInjection.cs
+
+  ProductName.API/
+    Controllers/
+    Contracts/
+      Requests/
+      Responses/
+    Middleware/
+    Filters/
+    Extensions/
+    Configuration/
+    Program.cs
+    appsettings.json
+    appsettings.Development.json
+
+.editorconfig
+.gitignore
+.env.example
+README.md
+AGENT_RULES.md
+ProductName.sln
+```
+
+Rules:
+
+- Rename `ProductName` to the actual solution/project name.
+- Do not create empty folders to match this tree.
+- Do not create separate projects without a practical reason.
+- Avoid excessive one-class-per-folder structures for trivial code.
+- Group code by feature/use case where that improves navigation.
+- Keep the solution modular without overengineering it.
+
+---
+
+## 5. Domain-Driven Design and Rich Domain Model
+
+Use DDD to protect business rules and model business concepts accurately.
+
+An entity should not become a passive collection of properties when it owns meaningful business behavior.
+
+### 5.1 Rich Domain Model
+
+Suppose an Order supports cancellation.
+
+Avoid scattering this logic across unrelated handlers and services:
+
+```csharp
+if (order.Status == OrderStatus.Pending)
+{
+    order.Status = OrderStatus.Cancelled;
+}
+```
+
+Prefer a domain operation:
+
+```csharp
+order.Cancel(reason, currentTime);
+```
+
+The `Order` entity or aggregate should decide whether cancellation is valid and enforce its own invariants.
+
+Apply the same principle to operations such as:
+
+- Confirming an order.
+- Adding or removing order items.
+- Applying discounts.
+- Transitioning between statuses.
+- Paying or refunding an order.
+- Enforcing quantity or price rules.
+
+### 5.2 Domain Model Rules
+
+- Protect important invariants inside domain objects.
+- Restrict setters when unrestricted mutation could invalidate an entity.
+- Use constructors or named factory methods to create valid objects.
+- Keep business decisions close to the entities that own them.
+- Use domain services for rules that genuinely span multiple domain objects.
+- Keep I/O and application orchestration outside the Domain.
+- Do not put repositories, email senders, HTTP clients, or `DbContext` inside entities.
+- Do not add methods to every entity merely to make the model appear rich.
+- Keep simple CRUD entities simple when there are no meaningful invariants to protect.
+- Avoid giant aggregates that require loading large graphs for every operation.
+- Use optimistic concurrency when concurrent updates could violate business rules.
+
+### 5.3 Domain Events
+
+Use domain events when a meaningful business fact occurs and multiple independent reactions may be needed.
+
+Do not introduce domain events for every property change.
+
+Domain events represent business facts. Application handlers determine how to react to them, and Infrastructure handles external delivery where required.
+
+Do not confuse in-process domain events with durable integration messages.
+
+---
+
+## 6. CQRS, Commands, Queries, and Handlers
+
+Use CQRS to separate state-changing operations from read operations.
+
+CQRS does not automatically require separate databases or different storage technologies.
+
+### Commands
+
+A command represents an intention to change state.
+
+Examples:
+
+- `CreateOrderCommand`
+- `CancelOrderCommand`
+- `UpdateUserProfileCommand`
+
+A command handler should coordinate the use case and call domain behavior.
+
+### Queries
+
+A query retrieves information without changing business state.
+
+Examples:
+
+- `GetOrderByIdQuery`
+- `GetOrdersQuery`
+- `GetCurrentUserQuery`
+
+Queries should return DTOs or read models rather than expose domain entities directly.
+
+### Handlers
+
+- Keep each handler focused on one use case.
+- Move business invariants into the Domain.
+- Keep database access and external calls behind suitable abstractions.
+- Use cancellation tokens.
+- Do not create generic handler frameworks that obscure straightforward use cases.
+- Do not split a simple operation into many artificial layers.
+- Do not place every business rule in a giant application service.
+
+### Pipeline Behaviors
+
+Use pipeline behaviors for genuinely cross-cutting concerns such as:
+
+- Validation.
+- Request logging.
+- Performance measurement.
+- Transaction boundaries, where justified.
+
+Do not implement the same behavior again in controllers, filters, handlers, and services without a deliberate reason.
+
+Use MediatR only when its benefits justify the dependency. If it is not appropriate, use a simpler explicit use-case approach.
+
+---
+
+## 7. FluentValidation
+
+Use FluentValidation for application input and use-case validation.
+
+### Responsibilities
+
+- API: transport-specific requirements and HTTP binding concerns.
+- Application: input and use-case validation.
+- Domain: invariants that must remain true regardless of the caller.
+- Database: constraints such as uniqueness and referential integrity that must remain valid under concurrency.
+
+### Rules
+
+- Register validators consistently.
+- Choose one main execution path, typically a validation pipeline behavior or explicit application validation.
+- Avoid duplicate validation across controllers, filters, pipeline behaviors, handlers, and domain methods.
+- Do not rely on a validator alone to protect a domain invariant.
+- Do not perform unnecessary database queries for every validator rule.
+- Recognize that pre-checking uniqueness is not a substitute for a database unique constraint.
+- Return validation failures through one consistent error contract.
+
+---
+
+## 8. API Results and Error Handling
+
+Use one canonical application result/error abstraction.
+
+Example:
+
+```csharp
+public sealed record Error(string Code, string Message);
+
+public sealed record Result<T>(
+    bool IsSuccess,
+    T? Value,
+    IReadOnlyList<Error> Errors)
+{
+    public static Result<T> Success(T value) =>
+        new(true, value, Array.Empty<Error>());
+
+    public static Result<T> Failure(params Error[] errors) =>
+        new(false, default, errors);
+}
+```
+
+This is an example, not a requirement to add another result type when the project already has a suitable one.
+
+### Rules
+
+- Do not create duplicate `ApiResponse`, `Result`, `ErrorResponse`, and `ResponseModel` abstractions with overlapping responsibilities.
+- Avoid nested wrappers such as `ApiResponse<Result<ApiResponse<T>>>`.
+- Keep application results independent of HTTP status codes when practical.
+- Map application outcomes to HTTP at the API boundary.
+- Use one consistent public error contract, such as `ProblemDetails` or a deliberately designed equivalent.
+- Do not return HTTP 200 for failures.
+- Do not expose exception stack traces, SQL errors, secrets, or internal implementation details.
+- Use stable error codes where useful.
+- Localize display messages at the appropriate boundary if required.
+- Use exceptions for unexpected faults, not as the normal mechanism for every business validation failure.
+
+### HTTP Status Codes
+
+Use appropriate status codes:
+
+- `200 OK`: successful request returning a response.
+- `201 Created`: resource created, preferably with a Location header.
+- `204 No Content`: successful operation without a response body.
+- `400 Bad Request`: malformed input or validation failure.
+- `401 Unauthorized`: missing or invalid authentication.
+- `403 Forbidden`: authenticated but not authorized.
+- `404 Not Found`: resource not found, subject to the resource-disclosure policy.
+- `409 Conflict`: conflicting state, uniqueness, or concurrency issue.
+- `429 Too Many Requests`: rate limit exceeded.
+- `500 Internal Server Error`: unexpected failure.
+
+### Exception Handling
+
+- Use centralized exception handling middleware or the supported ASP.NET Core exception handler.
+- Do not repeat generic try/catch blocks in every controller.
+- Log unexpected exceptions once at the appropriate boundary.
+- Include trace/correlation context where practical.
+- Never swallow exceptions or fabricate success responses.
+- Never log passwords, raw tokens, OTPs, or secrets.
+
+---
+
+## 9. DTOs, Mapping, and AutoMapper
+
+Keep transport contracts and domain models separate.
+
+- API request/response models belong in API when they are specifically HTTP contracts.
+- Application DTOs/read models belong in Application when they represent use-case input/output.
+- Domain entities and aggregates must not be returned directly from public controllers.
+- Map at clear architectural boundaries.
+- Use AutoMapper for repetitive, straightforward mappings when it reduces meaningful duplication.
+- Prefer explicit mapping for complex business transformations.
+- Prefer database-side projection for queries.
+- Use `Select` or tested AutoMapper `ProjectTo` to retrieve only required fields.
+- Do not hide business decisions inside mapping profiles.
+- Do not map sensitive properties by convention without explicit control.
+- Avoid multiple competing mapping systems without a concrete reason.
+
+---
+
+## 10. EF Core and Database Performance
+
+Database performance is a major part of API performance.
+
+### 10.1 Querying
+
+- Filter, sort, project, and paginate in the database.
+- Select only the columns required by the response.
+- Use `AsNoTracking()` for read-only entity queries that do not need change tracking.
+- Do not apply `AsNoTracking()` blindly to entities that will be updated.
+- Avoid N+1 queries.
+- Avoid excessive `Include()` chains and unnecessary object graphs.
+- Do not call `ToList()` before applying filters, sorting, projection, or pagination.
+- Avoid synchronous database operations in async request paths.
+- Pass cancellation tokens to supported EF Core operations.
+- Inspect generated SQL and query plans when performance matters.
+- Add indexes based on actual filtering, sorting, joins, and uniqueness requirements.
+- Avoid querying the database separately for each item in a loop when a set-based operation is possible.
+- Do not return all columns or all relationships by default.
+
+### 10.2 Pagination
+
+All potentially large list endpoints must use bounded pagination unless they are explicitly designed as streaming/export operations.
+
+- Enforce a maximum page size.
+- Validate page parameters.
+- Use deterministic ordering, including a unique tie-breaker.
+- Filter and paginate in the database.
+- Return only necessary pagination metadata.
+- Avoid counting every record when total count is not required.
+- Use offset pagination for ordinary lists when appropriate.
+- Consider keyset/cursor pagination for large datasets, deep pages, or frequently changing data.
+- Never fetch all records into memory to paginate them.
+- Keep one canonical pagination contract rather than duplicating pagination types across layers.
+
+### 10.3 Writes and Transactions
+
+- EF Core `DbContext` already provides change tracking and unit-of-work behavior.
+- Do not introduce a redundant `IUnitOfWork` wrapper unless it provides a concrete benefit.
+- Do not build a generic repository that simply mirrors every `DbSet` method.
+- Use repositories when they express aggregate persistence or provide a meaningful boundary.
+- Keep database transactions short.
+- Never hold a database transaction open while waiting for an external API or email provider.
+- Enforce important integrity rules at the database level.
+- Use concurrency tokens where lost updates matter.
+- Make retryable operations idempotent where possible.
+- Treat migrations as reviewed, source-controlled changes.
+- Never silently rewrite production migration history.
+- Never seed real credentials or production secrets.
+
+### 10.4 Specification Pattern
+
+Use Specification only when query criteria are meaningful, reusable, composable, and worth naming/testing.
+
+Do not create a specification for every simple `Where` or `OrderBy`.
+
+Keep EF Core-specific query execution concerns in Infrastructure or behind an intentionally designed query boundary.
+
+---
+
+## 11. Asynchronous Programming
+
+Use asynchronous I/O for database access, HTTP requests, file operations, and external integrations when supported.
+
+- Use `async`/`await` appropriately.
+- Pass `CancellationToken` through controllers, handlers, repositories, and external calls where supported.
+- Never use `.Result` or `.Wait()` in request processing.
+- Do not use `Task.Run` to pretend synchronous I/O is asynchronous.
+- Do not run concurrent operations on the same `DbContext`.
+- Avoid unbounded `Task.WhenAll`.
+- Parallelize independent external calls only when safe and resource-bounded.
+- Configure timeouts for external requests.
+- Use bounded retries only for suitable transient failures.
+- Ensure retrying non-idempotent operations cannot create duplicate payments, orders, or messages.
+
+Do not add `async` to methods that perform no asynchronous work without a reason.
+
+---
+
+## 12. Background Jobs and Fast Responses
+
+Slow side effects such as email, WhatsApp notifications, push notifications, PDF generation, and external integrations should not delay the HTTP response when the business workflow permits asynchronous completion.
+
+Recommended flow:
+
+1. Validate the request.
+2. Perform and durably commit the required business-state change.
+3. Persist a job/outbox record or enqueue work through a reliable mechanism when the work must not be lost.
+4. Return the correct response for the operation that has actually succeeded.
+5. Process the remaining work asynchronously with retries, observability, and idempotency.
+
+### Reliability Rules
+
+- Do not return success before the core business operation has succeeded.
+- Do not report that an external partner confirmed an order when the confirmation is still pending.
+- Do not use untracked fire-and-forget tasks.
+- In-memory queues can lose work on process restart. Use them only when loss is acceptable.
+- Consider the Transactional Outbox pattern when business data and an outgoing message must be committed atomically.
+- Use a durable queue or job framework when required by reliability, volume, or operational needs.
+- Do not introduce a large job framework into a small project without justification.
+- Track failures, retry counts, and permanently failed jobs for important workflows.
+
+---
+
+## 13. Caching
+
+Caching is an optimization, not a requirement for every endpoint.
+
+### 13.1 When to Cache
+
+Consider caching data that is:
+
+- Frequently requested.
+- Relatively stable.
+- Expensive to retrieve or calculate.
+- Safe to reuse for the intended caller.
+
+Examples may include public catalog data, categories, reference data, or stable configuration.
+
+First consider query optimization, indexing, projection, pagination, and eliminating duplicate calls.
+
+### 13.2 Cache Rules
+
+- Use `IMemoryCache` for small process-local data when per-instance behavior is acceptable.
+- Configure expiration and size limits.
+- Use Redis or another distributed cache when instances need shared state or a distributed capability.
+- Define TTL, key format, serialization, invalidation, and failure behavior.
+- Avoid cache stampedes for expensive hot keys when necessary.
+- Ensure user-specific keys include the correct user/tenant/permission scope.
+- Never treat cached values as the source of truth for payments, inventory, or other critical state.
+- Avoid caching secrets, OTPs, raw tokens, or personal data without a deliberate security design.
+- Prevent cache outages from creating uncontrolled database traffic.
+- Do not duplicate cache-aside logic across many handlers when a consistent abstraction is warranted.
+- Do not add Redis solely because it appears in this document.
+
+---
+
+## 14. Rate Limiting
+
+- Use ASP.NET Core rate-limiting middleware for appropriate API/IP policies.
+- Use distributed rate limiting when quotas must be shared across multiple instances.
+- Treat login and OTP abuse protection as distinct policies when appropriate.
+- Choose partition keys carefully.
+- Configure trusted proxy and forwarded-header handling correctly before relying on client IP.
+- Do not assume an in-process limiter is globally accurate in a multi-instance deployment.
+- Return `429 Too Many Requests` when appropriate.
+- Avoid overlapping limiters unless their interaction is deliberately defined.
+- Keep secrets and unnecessary personal data out of rate-limit keys and logs.
+
+---
+
+## 15. Authentication and Security
+
+- Use established ASP.NET Core authentication and authorization mechanisms.
+- Never implement custom cryptography.
+- Validate JWT issuer, audience, signature, signing key, and lifetime.
+- Keep signing secrets outside source control.
+- Use access-token lifetimes appropriate to the application.
+- If refresh tokens are used, implement rotation and revocation; consider reuse detection.
+- Store refresh-token hashes where feasible and never log raw tokens.
+- Enforce authorization server-side at the endpoint/use-case/resource boundary.
+- Distinguish authentication from authorization.
+- Follow least privilege for roles, policies, database access, and external credentials.
+- Configure CORS narrowly. CORS is not authentication.
+- Protect cookie-authenticated state-changing requests against CSRF where applicable.
+- Validate upload size, content type, extension, and file signature as appropriate.
+- Generate safe filenames and prevent path traversal.
+- Validate webhook signatures and make webhook handling idempotent.
+- OTPs require short expiry, attempt limits, resend throttling, one-time use, and secure storage.
+- OAuth/Google login must validate provider-issued identity/tokens; never trust a client-submitted email alone.
+- Never expose stack traces, SQL details, internal file paths, or secrets in API responses.
+- Keep production secrets, credentials, tokens, and customer data out of source control.
+- `.env.example` must contain placeholders only.
+
+---
+
+## 16. External Integrations and File Storage
+
+- Register outbound HTTP clients with `IHttpClientFactory`.
+- Configure appropriate timeouts and bounded resilience policies.
+- Keep vendor-specific SDK types out of Domain and preferably out of Application contracts.
+- Define interfaces where Application needs a capability and implement them in Infrastructure.
+- Distinguish transient failures from permanent failures.
+- Use idempotency keys for payment/partner calls when supported.
+- Keep external calls outside database transactions.
+- Abstract file storage only when provider independence or testing benefits justify it.
+- Validate uploads and define file size, access, retention, and deletion rules.
+- Local `wwwroot` storage is appropriate only if the hosting filesystem is persistent and its backup/multi-instance behavior is understood.
+- Ephemeral or multi-instance hosting may require object storage.
+- Avoid coupling the whole application to a provider-specific file URL or response type.
+
+---
+
+## 17. SOLID and Clean Code
+
+Apply SOLID as practical design principles, not a checklist requiring more classes.
+
+- **Single Responsibility:** each module has a cohesive responsibility.
+- **Open/Closed:** extend behavior without speculative plugin frameworks.
+- **Liskov Substitution:** implementations respect their contracts.
+- **Interface Segregation:** avoid bloated interfaces.
+- **Dependency Inversion:** high-level policy depends on stable abstractions rather than implementation details.
+
+Additional rules:
+
+- Prefer composition over deep inheritance.
+- Use clear names and small, cohesive methods.
+- Avoid giant services, generic base handlers, god objects, and catch-all helper classes.
+- Do not add an interface merely because a class exists.
+- Do not add a factory for every object.
+- Use factories when construction has meaningful rules or complexity.
+- Use strategies when multiple interchangeable algorithms are genuinely needed.
+- Use decorators when cross-cutting behavior is best composed around an abstraction.
+- Use Specification only for meaningful reusable query/domain rules.
+- Use generic repositories only when they provide a real benefit.
+- Do not add patterns solely to make the architecture appear sophisticated.
+- Avoid duplicate constants, validators, mapping systems, response contracts, pagination types, or service registrations.
+- Comments should explain why a non-obvious decision exists rather than restating the code.
+
+---
+
+## 18. Dependency Injection and Configuration
+
+- Use clear `AddApplication()` and `AddInfrastructure()` registration methods when they improve organization.
+- Register services in the layer responsible for their implementation.
+- Choose service lifetimes deliberately.
+- `DbContext` should normally be scoped, not singleton.
+- Do not inject scoped services into singletons.
+- Ensure singleton services are thread-safe.
+- Avoid service locator patterns in business code.
+- Avoid duplicate or conflicting service registrations.
+- Use the Options pattern for meaningful groups of configuration.
+- Validate required configuration at startup.
+- Keep secrets outside source control and provide environment-variable documentation.
+- Use safe defaults only where appropriate.
+- Do not create a configuration class for every scalar setting without a real benefit.
+
+---
+
+## 19. Logging, Observability, and Health Checks
+
+- Use structured logging.
+- Include trace/correlation IDs where practical.
+- Measure important endpoint latency and external dependency failures.
+- Do not log passwords, tokens, OTPs, or unnecessary personal data.
+- Distinguish liveness from readiness health checks.
+- Do not make liveness fail solely because an optional third-party integration is unavailable.
+- Add metrics and tracing when justified.
+- Avoid high-cardinality metric labels such as raw user IDs.
+- Track important background-job failures, retries, and completion.
+- Ensure errors can be diagnosed without leaking sensitive details to clients.
+
+---
+
+## 20. Performance and Memory Optimization
+
+Performance optimization must be evidence-driven.
+
+### 20.1 Improving Slow Endpoints
+
+For a slow API endpoint:
+
+1. Measure end-to-end latency.
+2. Separate database time, external HTTP time, serialization, and queueing.
+3. Inspect generated SQL, query plans, indexes, row counts, and query count.
+4. Remove over-fetching with projection.
+5. Add bounded pagination to large lists.
+6. Eliminate N+1 queries and duplicate lookups.
+7. Cache stable, frequently reused data only when invalidation is understood.
+8. Move non-critical side effects to reliable background processing.
+9. Parallelize independent I/O only when safe and bounded.
+10. Reduce response payload size.
+11. Enable Brotli/Gzip compression when the payload and CPU trade-off justify it.
+12. Use a CDN or object storage for suitable static assets.
+13. Profile before and after changes.
+
+A CDN does not fix inefficient database queries. Caching does not compensate for incorrect data-access design.
+
+### 20.2 Memory Rules
+
+- Bound collection sizes and use pagination.
+- Avoid materializing large datasets unnecessarily.
+- Stream large uploads/downloads and exports when appropriate.
+- Avoid unnecessarily large object graphs and intermediate collections.
+- Avoid unbounded in-memory caches.
+- Avoid unbounded parallel operations.
+- Dispose unmanaged resources correctly.
+- Use appropriate DI lifetimes.
+- Configure production logging sensibly.
+- Measure working set, allocations, garbage collection, and throughput under realistic traffic.
+
+Do not promise a particular RAM ceiling or sub-second response time based solely on architecture. Hosting limits, database latency, traffic patterns, and deployment configuration all matter.
+
+### 20.3 Payload Optimization
+
+- Return only fields the client needs.
+- Use DTO projections and pagination.
+- Apply suitable caching headers to safe public resources.
+- Use response compression when beneficial.
+- Do not compress already-compressed media blindly.
+- Never publicly cache private or user-specific data without a deliberate cache-control design.
+
+
+---
+
+## 22. API, Time, Money, and Compatibility
+
+### API
+
+- Keep controllers thin.
+- Use explicit request and response contracts.
+- Apply correct HTTP status codes.
+- Bound request-body and upload sizes.
+- Use consistent filtering, sorting, pagination, and error formats.
+- Introduce API versioning only when a real compatibility policy requires it.
+- Avoid silent breaking changes to public contracts.
+
+### Time
+
+- Persist instants in UTC by default.
+- Use explicit business time zones for daily resets, deadlines, and business-local dates.
+- Never rely on the server's local timezone.
+- Use `DateTimeOffset` where instant/offset semantics matter.
+- Introduce an injectable time abstraction when it materially improves testing.
+
+### Money
+
+- Use `decimal` for monetary values.
+- Define currency and rounding policies explicitly.
+- Never use binary floating-point for currency calculations.
+- Centralize discounts, percentage calculations, and rounding rules in the Domain where they are business rules.
+
+### Long-Running Operations
+
+Use `202 Accepted` and a status resource when work has been accepted but is not yet complete. Do not report completion prematurely.
+
+---
+
+## 23. AI Agent Workflow
+
+### When Creating a Project from an Empty Folder
+
+1. Read this entire file.
+2. Ask only essential clarifying questions.
+3. Choose reasonable defaults for nonessential details and document them.
+4. Confirm project scope, runtime, database, authentication, integrations, hosting, and constraints.
+5. Create the solution and project references according to the dependency rules.
+6. Implement one complete vertical slice first:
+   - Domain behavior.
+   - Command or query.
+   - Handler.
+   - Validator when needed.
+   - Persistence.
+   - API endpoint.
+7. Verify that the architecture works before generating repetitive scaffolding.
+8. Add cross-cutting behaviors only when needed.
+9. Configure DI, error handling, options validation, logging, OpenAPI, and environment configuration.
+10. Create migrations only after the model and provider are configured.
+11. Build the solution.
+12. Fix compilation errors and obvious analyzer issues.
+13. Write a README with actual setup, run, migration, and environment-variable instructions.
+14. Report the architecture, files created, assumptions, commands executed, build results, and remaining limitations.
+
+### When Modifying an Existing Project
+
+1. Inspect project references, existing code, DI, migrations, and public API contracts.
+2. Preserve behavior unless a change is explicitly requested.
+3. Search references before removing or renaming code.
+4. Avoid broad rewrites without a migration plan.
+5. Make the smallest coherent change.
+6. Verify the change through a build where possible.
+7. Report what was actually verified.
+
+---
+
+## 24. Mandatory Rules
+
+The agent MUST:
+
+- Follow the dependency direction defined in this document.
+- Keep Domain and Application independent of Infrastructure implementations.
+- Protect business invariants in the appropriate domain objects.
+- Use asynchronous I/O and cancellation tokens where supported.
+- Apply database-side filtering, projection, and bounded pagination.
+- Use one consistent result/error contract.
+- Use one deliberate validation execution path.
+- Avoid unbounded in-memory state and unbounded concurrency.
+- Use durable background processing when work must survive process restarts.
+- Keep secrets outside source control.
+- Report build results honestly.
+- Explain significant architectural deviations.
+
+The agent MUST NOT:
+
+- Create empty folders/projects just to match the architecture diagram.
+- Add every design pattern by default.
+- Add Redis, MediatR, AutoMapper, a generic repository, a Unit of Work wrapper, Specification, Outbox, or a job scheduler without a concrete requirement.
+- Put business workflows in controllers.
+- Put database/provider details in Domain.
+- Return EF Core entities directly from public APIs.
+- Load all records and paginate in memory.
+- Use `.Result`, `.Wait()`, untracked fire-and-forget tasks, or concurrent operations on one `DbContext`.
+- Return success before the defined success condition is met.
+- Duplicate result types, pagination types, validation, mapping, cache logic, or rate-limiting logic.
+- Swallow exceptions or expose sensitive internals.
+- Commit secrets or claim unverified build or deployment steps passed.
+- Silently introduce breaking API changes.
+
+---
+
+## 25. Definition of Done
+
+Before considering a feature or generated project complete, verify:
+
+- [ ] Project references follow the intended dependency direction.
+- [ ] Domain invariants are protected.
+- [ ] Validation follows one deliberate path.
+- [ ] Errors map consistently to the selected API contract and HTTP semantics.
+- [ ] DTOs/read models are explicit; persistence entities are not leaked.
+- [ ] Large lists are paginated or intentionally streamed.
+- [ ] Queries avoid obvious N+1 behavior and over-fetching.
+- [ ] Async I/O and cancellation are used where supported.
+- [ ] DI lifetimes and required configuration are valid.
+- [ ] Authentication and authorization are enforced server-side.
+- [ ] The build was actually run where possible, and its result is reported accurately.
+- [ ] README and `.env.example` match the actual implementation.
+- [ ] No unnecessary packages, duplicate abstractions, or unused scaffolding remain.
+- [ ] Performance claims are based on measurements rather than assumptions.
+
+## Final Engineering Principle
+
+**Start from the business requirement, establish the correct boundary, implement the simplest reliable solution, measure the bottleneck, and add complexity only when evidence or a concrete requirement justifies it.**
+
+Clean Architecture, DDD, CQRS, SOLID, design patterns, caching, background jobs, and parallelism are tools—not goals. A well-engineered backend protects business rules, controls dependencies, handles failures predictably, uses resources efficiently, and remains affordable to change.

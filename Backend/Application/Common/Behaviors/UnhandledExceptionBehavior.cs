@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -27,7 +27,7 @@ namespace Application.Common.Behaviors
             catch (Exception ex)
             {
                 var requestName = typeof(TRequest).Name;
-                _logger.LogInformation($"Unhandled exception occured with request name :{requestName} ,{request}");
+                _logger.LogError(ex, "Unhandled exception occurred with request name: {RequestName}, {@Request}", requestName, request);
                 throw;
             }
         }

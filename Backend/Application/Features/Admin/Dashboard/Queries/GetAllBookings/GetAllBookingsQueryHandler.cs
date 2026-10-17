@@ -47,42 +47,53 @@ namespace Application.Features.Admin.Dashboard.Queries.GetAllBookings
                 status = parsedStatus;
             }
 
-            var bookings = await bookingRepo.FindAsync(b =>
-                (!request.Date.HasValue || b.BookingDate == request.Date.Value) &&
-                (string.IsNullOrEmpty(request.BarberId) || b.BarberId == request.BarberId) &&
-                (string.IsNullOrEmpty(request.CustomerId) || b.CustomerId == request.CustomerId) &&
-                (!status.HasValue || b.Status == status.Value));
+            var query = bookingRepo.GetIQueryable()
+                .Include(b => b.Customer)
+                .Include(b => b.Barber)
+                .AsNoTracking();
 
-            var totalCount = bookings.Count();
+            if (request.Date.HasValue)
+            {
+                query = query.Where(b => b.BookingDate == request.Date.Value);
+            }
 
-            var bookingList = bookings
+            if (!string.IsNullOrEmpty(request.BarberId))
+            {
+                query = query.Where(b => b.BarberId == request.BarberId);
+            }
+
+            if (!string.IsNullOrEmpty(request.CustomerId))
+            {
+                query = query.Where(b => b.CustomerId == request.CustomerId);
+            }
+
+            if (status.HasValue)
+            {
+                query = query.Where(b => b.Status == status.Value);
+            }
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var result = await query
                 .OrderByDescending(b => b.BookingDate)
                 .ThenByDescending(b => b.StartTime)
                 .Skip((request.PageIndex - 1) * request.PageSize)
                 .Take(request.PageSize)
-                .ToList();
-
-            var result = new List<AdminBookingDTO>();
-
-            foreach (var booking in bookingList)
-            {
-                var barber = await _userManager.FindByIdAsync(booking.BarberId);
-
-                result.Add(new AdminBookingDTO
+                .Select(booking => new AdminBookingDTO
                 {
                     Id = booking.Id,
-                    CustomerName = booking.CustomerNameSnapshot ?? "Unknown",
-                    CustomerPhone = booking.CustomerPhoneSnapshot,
-                    CustomerEmail = booking.Customer?.Email ?? "",
-                    BarberName = barber?.FullName ?? "Unknown",
+                    CustomerName = booking.CustomerNameSnapshot ?? (booking.Customer != null ? booking.Customer.FullName : "Unknown"),
+                    CustomerPhone = booking.CustomerPhoneSnapshot ?? (booking.Customer != null ? booking.Customer.PhoneNumber : null),
+                    CustomerEmail = booking.Customer != null ? (booking.Customer.Email ?? "") : "",
+                    BarberName = booking.Barber != null ? booking.Barber.FullName : "Unknown",
                     BookingDate = booking.BookingDate,
                     StartTime = booking.StartTime,
                     EndTime = booking.EndTime,
                     TotalPrice = booking.TotalPrice,
                     Status = booking.Status.ToString(),
                     CreatedAt = booking.CreatedAt
-                });
-            }
+                })
+                .ToListAsync(cancellationToken);
 
             return new PaginationResponse<AdminBookingDTO>(
                 request.PageSize,

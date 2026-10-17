@@ -55,8 +55,7 @@ namespace Application.Features.Auth.Commands.SendOTP
 
                 // Generate OTP
                 var otp = new Random().Next(100000, 999999).ToString();
-                user.VerificationCode = otp;
-                user.CodeExpiresAt = DateTime.UtcNow.AddMinutes(_emailConfiguration.ExpirationMinutes);
+                user.SetVerificationCode(otp, DateTime.UtcNow.AddMinutes(_emailConfiguration.ExpirationMinutes));
 
                 var updateResult = await _userManager.UpdateAsync(user);
                 if (!updateResult.Succeeded)

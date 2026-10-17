@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using API.Infrastructure.Persistence.Context;
 using Domain.Entities;
 using Domain.Repositories;
-using Google;
 using Microsoft.EntityFrameworkCore;
 
 
@@ -64,7 +63,7 @@ namespace Infrastructure.Persistence.Repositories
                 _hashtableRepos.Add(type, repo);
             }
 
-            return _hashtableRepos[type] as IGenaricRepository<TEntity, Tkey>;
+            return (IGenaricRepository<TEntity, Tkey>)_hashtableRepos[type]!;
         }
 
         // Disposes the DbContext

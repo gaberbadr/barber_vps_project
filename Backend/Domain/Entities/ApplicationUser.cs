@@ -43,5 +43,39 @@ namespace Domain.Entities
         public ICollection<Booking> BarberBookings { get; set; } = new List<Booking>();
 
         public ICollection<BarberWorkingHour> BarberWorkingHours { get; set; } = new List<BarberWorkingHour>();
+
+        public void SetVerificationCode(string code, DateTime expiresAt)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+                throw new ArgumentException("Verification code cannot be empty.", nameof(code));
+
+            VerificationCode = code;
+            CodeExpiresAt = expiresAt;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public bool IsVerificationCodeValid(string code, DateTime utcNow)
+        {
+            if (string.IsNullOrWhiteSpace(VerificationCode) || CodeExpiresAt == null)
+                return false;
+
+            if (utcNow > CodeExpiresAt.Value)
+                return false;
+
+            return string.Equals(VerificationCode, code, StringComparison.Ordinal);
+        }
+
+        public void ClearVerificationCode()
+        {
+            VerificationCode = null;
+            CodeExpiresAt = null;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void UpdateProfilePicture(string? url)
+        {
+            ProfilePictureUrl = url;
+            UpdatedAt = DateTime.UtcNow;
+        }
     }
 }

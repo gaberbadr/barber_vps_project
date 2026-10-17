@@ -71,10 +71,7 @@ namespace Application.Features.Bookings.Commands.Cancel
                     $"تقدر تلغي الحجز بس قبل الميعاد بـ {settings.CancellationWindowHours} ساعات على الأقل.");
 
             var utcNow = _timeProvider.GetUtcNow().DateTime;
-            booking.Status = BookingStatus.Cancelled;
-            booking.CancelledAt = utcNow;
-            booking.CancelledBy = request.CancelledByUserId;
-            booking.UpdatedAt = utcNow;
+            booking.Cancel(request.CancelledByUserId, utcNow);
 
             bookingRepo.Update(booking);
             await _unitOfWork.CompleteAsync();

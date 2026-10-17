@@ -40,15 +40,14 @@ namespace Application.Features.Auth.Commands.VerifyOTP
                 return Error.Failure("auth.user.blocked", "حسابك موقوف. يرجى التواصل مع الدعم.");
             }
 
-            // Check if OTP is expired
-            if (user.CodeExpiresAt == null || user.CodeExpiresAt < DateTime.UtcNow)
+            // Verify OTP using domain method
+            if (!user.IsVerificationCodeValid(request.Code, DateTime.UtcNow))
             {
-                return Error.Failure("auth.otp.expired", "كود التحقق انتهت صلاحيته.");
-            }
+                if (user.CodeExpiresAt == null || user.CodeExpiresAt < DateTime.UtcNow)
+                {
+                    return Error.Failure("auth.otp.expired", "كود التحقق انتهت صلاحيته.");
+                }
 
-            // Verify OTP
-            if (user.VerificationCode != request.Code)
-            {
                 return Error.Failure("auth.otp.invalid", "كود التحقق غير صحيح.");
             }
 

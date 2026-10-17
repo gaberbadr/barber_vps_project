@@ -4,8 +4,8 @@ namespace Application.Features.Auth.Commands.UpdateProfilePicture
 {
     public class UpdateProfilePictureCommandValidator : AbstractValidator<UpdateProfilePictureCommand>
     {
-        private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
-        private const long MaxFileSizeBytes = 5 * 1024 * 1024; // 5 MB
+        private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tif", ".tiff" };
+        private const long MaxFileSizeBytes = 15 * 1024 * 1024; // 15 MB
 
         public UpdateProfilePictureCommandValidator()
         {
@@ -19,12 +19,12 @@ namespace Application.Features.Auth.Commands.UpdateProfilePicture
             {
                 RuleFor(x => x.ProfilePictureFile!.Length)
                     .LessThanOrEqualTo(MaxFileSizeBytes)
-                    .WithMessage($"حجم الملف مينفعش يعدي 5 ميجا.");
+                    .WithMessage($"حجم الملف مينفعش يعدي 15 ميجا.");
 
                 RuleFor(x => x.ProfilePictureFile!.FileName)
                     .Must(fileName => AllowedExtensions.Any(ext => 
                         fileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
-                    .WithMessage("الملف لازم يكون بصيغة صورة صحيحة (.jpg, .jpeg, .png, .gif, .webp).");
+                    .WithMessage("الملف لازم يكون بصيغة صورة صحيحة (.jpg, .jpeg, .png, .gif, .webp, .bmp, .tiff).");
 
                 RuleFor(x => x.ProfilePictureFile!.ContentType)
                     .Must(contentType => contentType != null && 

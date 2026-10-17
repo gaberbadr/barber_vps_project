@@ -37,24 +37,33 @@ namespace Application.Features.Auth.Commands.DeleteProfilePicture
                 return Error.NotFound("image.not.found", "المستخدم معندوش صورة شخصية.");
             }
 
+            var oldProfilePictureUrl = user.ProfilePictureUrl;
+
             try
             {
-                // Delete from local storage
-                var uri = new Uri(user.ProfilePictureUrl);
-                var fileName = Path.GetFileName(uri.LocalPath);
-                
-                if (!string.IsNullOrEmpty(fileName))
-                {
-                    _fileStorageService.Delete(fileName, "profiles");
-                }
-
-                // Clear the URL from user
-                user.ProfilePictureUrl = null;
+                // Clear the URL from user via domain method first
+                user.UpdateProfilePicture(null);
 
                 var updateResult = await _userManager.UpdateAsync(user);
                 if (!updateResult.Succeeded)
                 {
                     return Error.Failure("image.delete.failed", "فشل مسح الصورة الشخصية.");
+                }
+
+                // Delete from local storage only after DB update succeeds
+                try
+                {
+                    var uri = new Uri(oldProfilePictureUrl);
+                    var fileName = Path.GetFileName(uri.LocalPath);
+                    
+                    if (!string.IsNullOrEmpty(fileName))
+                    {
+                        _fileStorageService.Delete(fileName, "profiles");
+                    }
+                }
+                catch
+                {
+                    // Ignore physical file deletion error since DB is already updated
                 }
 
                 return Result.Success;

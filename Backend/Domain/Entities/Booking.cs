@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Domain.Entities;
 using Domain.Enums;
 
@@ -26,5 +28,24 @@ namespace Domain.Entities
         public ApplicationUser Barber { get; set; } = null!;
         public Coupon? Coupon { get; set; }
         public ICollection<BookingItem> BookingItems { get; set; } = new List<BookingItem>();
+
+        public void Cancel(string cancelledByUserId, DateTime utcNow)
+        {
+            if (Status == BookingStatus.Cancelled)
+            {
+                throw new InvalidOperationException("Booking is already cancelled.");
+            }
+
+            Status = BookingStatus.Cancelled;
+            CancelledAt = utcNow;
+            CancelledBy = cancelledByUserId;
+            UpdatedAt = utcNow;
+        }
+
+        public void UpdateStatus(BookingStatus newStatus, DateTime utcNow)
+        {
+            Status = newStatus;
+            UpdatedAt = utcNow;
+        }
     }
 }

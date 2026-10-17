@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using Domain.Entities;
 
 namespace Domain.Entities
@@ -6,13 +6,13 @@ namespace Domain.Entities
     public class LoginAttempt : BaseEntity<int>
     {
         [Required]
-        public string Email { get; set; }
+        public string Email { get; set; } = string.Empty;
 
         public DateTime AttemptedAt { get; set; }
 
         public bool IsSuccessful { get; set; }
 
         [MaxLength(50)]
-        public string IpAddress { get; set; }
+        public string IpAddress { get; set; } = string.Empty;
     }
 }

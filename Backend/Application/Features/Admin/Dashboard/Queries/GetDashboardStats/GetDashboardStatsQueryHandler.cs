@@ -6,7 +6,10 @@ using ErrorOr;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Error = ErrorOr.Error;
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Application.Features.Admin.Dashboard.Queries.GetDashboardStats
 {
@@ -33,18 +36,26 @@ namespace Application.Features.Admin.Dashboard.Queries.GetDashboardStats
             var barberIds = barbers.Select(b => b.Id).ToHashSet();
 
             var bookingRepo = _unitOfWork.Repository<Booking, int>();
-            var allBookings = await bookingRepo.GetAllAsync();
-
             var serviceRepo = _unitOfWork.Repository<Service, int>();
-            var services = await serviceRepo.FindAsync(s => !s.IsDeleted);
 
             var today = DateOnly.FromDateTime(_timeProvider.GetLocalNow().Date);
             var firstOfMonth = new DateOnly(today.Year, today.Month, 1);
 
             var validBookingStatuses = new[] { BookingStatus.Confirmed, BookingStatus.Arrived, BookingStatus.DidNotArrive };
-            
-            var confirmedBookings = allBookings.Where(b => validBookingStatuses.Contains(b.Status)).ToList();
-            var cancelledBookings = allBookings.Where(b => b.Status == BookingStatus.Cancelled).ToList();
+
+            var bookingQuery = bookingRepo.GetIQueryable().AsNoTracking();
+            var confirmedQuery = bookingQuery.Where(b => validBookingStatuses.Contains(b.Status));
+            var cancelledQuery = bookingQuery.Where(b => b.Status == BookingStatus.Cancelled);
+
+            var totalConfirmedBookings = await confirmedQuery.CountAsync(cancellationToken);
+            var totalCancelledBookings = await cancelledQuery.CountAsync(cancellationToken);
+            var todayConfirmedBookings = await confirmedQuery.Where(b => b.BookingDate == today).CountAsync(cancellationToken);
+            var thisMonthConfirmedQuery = confirmedQuery.Where(b => b.BookingDate >= firstOfMonth);
+            var thisMonthConfirmedBookings = await thisMonthConfirmedQuery.CountAsync(cancellationToken);
+            var totalConfirmedRevenue = await confirmedQuery.SumAsync(b => b.TotalPrice, cancellationToken);
+            var thisMonthConfirmedRevenue = await thisMonthConfirmedQuery.SumAsync(b => b.TotalPrice, cancellationToken);
+
+            var totalServices = await serviceRepo.GetIQueryable().AsNoTracking().CountAsync(s => !s.IsDeleted, cancellationToken);
 
             var dto = new DashboardStatsDTO
             {
@@ -53,13 +64,13 @@ namespace Application.Features.Admin.Dashboard.Queries.GetDashboardStats
                 BlockedUsers = allUsers.Count(u => !barberIds.Contains(u.Id) && !u.IsActive),
                 TotalBarbers = barbers.Count(b => !b.IsDeleted),
                 ActiveBarbers = barbers.Count(b => !b.IsDeleted && b.IsActive),
-                TotalServices = services.Count(),
-                TotalConfirmedBookings = confirmedBookings.Count,
-                TotalCancelledBookings = cancelledBookings.Count,
-                TodayConfirmedBookings = confirmedBookings.Count(b => b.BookingDate == today),
-                ThisMonthConfirmedBookings = confirmedBookings.Count(b => b.BookingDate >= firstOfMonth),
-                TotalConfirmedRevenue = confirmedBookings.Sum(b => b.TotalPrice),
-                ThisMonthConfirmedRevenue = confirmedBookings.Where(b => b.BookingDate >= firstOfMonth).Sum(b => b.TotalPrice)
+                TotalServices = totalServices,
+                TotalConfirmedBookings = totalConfirmedBookings,
+                TotalCancelledBookings = totalCancelledBookings,
+                TodayConfirmedBookings = todayConfirmedBookings,
+                ThisMonthConfirmedBookings = thisMonthConfirmedBookings,
+                TotalConfirmedRevenue = totalConfirmedRevenue,
+                ThisMonthConfirmedRevenue = thisMonthConfirmedRevenue
             };
 
             return dto;

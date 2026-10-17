@@ -52,37 +52,43 @@ namespace Application.Features.Auth.Commands.UpdateProfilePicture
 
             try
             {
-                // Upload new image locally
-                string fileName = _fileStorageService.Upload(request.ProfilePictureFile, "profiles");
+                // Upload and convert new image to WebP asynchronously
+                string fileName = await _fileStorageService.UploadImageAsync(request.ProfilePictureFile, "profiles", cancellationToken);
                 string baseUrl = _configuration["BaseURL"] ?? "http://localhost:5000";
                 string fileUrl = _fileStorageService.GetFileUrl(fileName, "profiles", baseUrl);
 
-                // Update user with new image URL
-                user.ProfilePictureUrl = fileUrl;
+                // Update user with new image URL using domain method
+                user.UpdateProfilePicture(fileUrl);
 
                 var updateResult = await _userManager.UpdateAsync(user);
                 if (!updateResult.Succeeded)
                 {
-                    // If database update fails, attempt to delete the uploaded image
+                    // If database update fails, delete the newly uploaded image to prevent orphaned files
                     _fileStorageService.Delete(fileName, "profiles");
                     return Error.Failure("image.update.failed", "فشل تحديث صورة الملف الشخصي.");
                 }
 
-                // Delete old image if it existed locally
+                // Delete old image only after database update succeeded
                 if (!string.IsNullOrEmpty(oldProfilePictureUrl))
                 {
-                    // Extract filename from URL
-                    var uri = new Uri(oldProfilePictureUrl);
-                    var oldFileName = Path.GetFileName(uri.LocalPath);
-                    if (!string.IsNullOrEmpty(oldFileName))
+                    try
                     {
-                        _fileStorageService.Delete(oldFileName, "profiles");
+                        var uri = new Uri(oldProfilePictureUrl);
+                        var oldFileName = Path.GetFileName(uri.LocalPath);
+                        if (!string.IsNullOrEmpty(oldFileName))
+                        {
+                            _fileStorageService.Delete(oldFileName, "profiles");
+                        }
+                    }
+                    catch
+                    {
+                        // Failure to delete old file should not fail the completed update
                     }
                 }
 
                 return new ProfilePictureResponseDTO
                 {
-                    ProfilePictureUrl = user.ProfilePictureUrl,
+                    ProfilePictureUrl = user.ProfilePictureUrl ?? string.Empty,
                     Message = "تم تحديث صورة الملف الشخصي بنجاح."
                 };
             }

@@ -219,7 +219,7 @@ namespace Zero.Controllers
 
             var command = new LogoutCommand
             {
-                UserId = _currentUser.UserId,
+                UserId = _currentUser.UserId ?? string.Empty,
                 RefreshToken = request.RefreshToken
             };
 
@@ -242,7 +242,7 @@ namespace Zero.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Logout()
         {
-            var command = new LogoutCommand { UserId = _currentUser.UserId };
+            var command = new LogoutCommand { UserId = _currentUser.UserId ?? string.Empty };
             var result = await _mediator.Send(command);
 
             if (result.IsError)

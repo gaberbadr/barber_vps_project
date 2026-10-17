@@ -65,8 +65,7 @@ namespace Application.Features.Bookings.Commands.UpdateStatus
             if (today != bookingDate)
                 return Error.Validation("booking.date.invalid", "مينفعش تغير حالة حجز غير حجز النهارده بس.");
 
-            booking.Status = request.NewStatus;
-            booking.UpdatedAt = _timeProvider.GetUtcNow().DateTime;
+            booking.UpdateStatus(request.NewStatus, _timeProvider.GetUtcNow().DateTime);
 
             bookingRepo.Update(booking);
             await _unitOfWork.CompleteAsync();

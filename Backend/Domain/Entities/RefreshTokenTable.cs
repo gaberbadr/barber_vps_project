@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -12,10 +12,10 @@ namespace Domain.Entities
     {
 
         [Required]
-        public string Token { get; set; }
+        public string Token { get; set; } = string.Empty;
 
         [Required]
-        public string UserId { get; set; }
+        public string UserId { get; set; } = string.Empty;
 
         public DateTime ExpiresAt { get; set; }
 
@@ -28,6 +28,6 @@ namespace Domain.Entities
 
         // Navigation Properties
         [ForeignKey("UserId")]
-        public ApplicationUser User { get; set; }
+        public ApplicationUser User { get; set; } = null!;
     }
 }

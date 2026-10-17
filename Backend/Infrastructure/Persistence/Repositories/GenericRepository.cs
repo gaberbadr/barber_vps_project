@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -8,7 +8,6 @@ using API.Infrastructure.Persistence.Context;
 using Domain;
 using Domain.Entities;
 using Domain.Repositories;
-using Google;
 using Infrastructure.Specification;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,7 +29,7 @@ namespace Infrastructure.Persistence.Repositories
             return await _dbContext.Set<TEntity>().ToListAsync();
         }
 
-        public async Task<TEntity> GetAsync(TKey id)
+        public async Task<TEntity?> GetAsync(TKey id)
         {
             return await _dbContext.Set<TEntity>().FindAsync(id);
         }
@@ -45,7 +44,7 @@ namespace Infrastructure.Persistence.Repositories
             return await _dbContext.Set<TEntity>().AsNoTracking().ToListAsync();
         }
 
-        public async Task<TEntity> GetAsNoTrackingAsync(TKey id)
+        public async Task<TEntity?> GetAsNoTrackingAsync(TKey id)
         {
             var entity = await _dbContext.Set<TEntity>().FindAsync(id);
             if (entity != null)
@@ -70,10 +69,10 @@ namespace Infrastructure.Persistence.Repositories
             _dbContext.Set<TEntity>().Remove(entity);
         }
 
-        public async Task<TEntity?> DeleteAsync(TEntity entity)
+        public Task<TEntity?> DeleteAsync(TEntity entity)
         {
             _dbContext.Set<TEntity>().Remove(entity);
-            return entity;
+            return Task.FromResult<TEntity?>(entity);
         }
 
         public async Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate)
@@ -135,7 +134,7 @@ namespace Infrastructure.Persistence.Repositories
             return await ApplySpecfications(spec).ToListAsync();
         }
 
-        public async Task<TEntity> GetWithSpecficationAsync(ISpecifications<TEntity, TKey> spec)
+        public async Task<TEntity?> GetWithSpecficationAsync(ISpecifications<TEntity, TKey> spec)
         {
             return await ApplySpecfications(spec).FirstOrDefaultAsync();
         }

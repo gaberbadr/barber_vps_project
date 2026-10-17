@@ -35,6 +35,9 @@ Open the `.env` file you just created and fill in your real, secure passwords. M
 - Authentication__Google__ClientId
 - Authentication__Google__ClientSecret
 - CERTBOT_EMAIL
+- PGADMIN_DEFAULT_EMAIL (Admin email for pgAdmin 4)
+- PGADMIN_DEFAULT_PASSWORD (Strong password for pgAdmin 4)
+- PGADMIN_HOST_PORT (Host port, default 5050 bound to 127.0.0.1)
 
 STEP 4: PROVISION SSL CERTIFICATES
 Run the Let's Encrypt initialization script to get your HTTPS certificates.
@@ -53,3 +56,41 @@ Once the certificates are generated, start all the containers in the background:
 docker compose up -d --build
 
 Done! Your website is now live at https://barber.devs.surf.
+
+--------------------------------------------------
+PART 3: POSTGRESQL ADMINISTRATION (PGADMIN 4)
+--------------------------------------------------
+pgAdmin 4 is configured as a dedicated container (`barber-pgadmin`) connected directly to the internal Docker network (`barber-network`).
+
+1. SECURITY & ACCESS:
+   pgAdmin is intentionally bound to `127.0.0.1:5050` on the VPS host to prevent public internet exposure.
+   To securely access pgAdmin from your local machine, open an SSH tunnel:
+   
+   ssh -L 5050:localhost:5050 user@your_vps_ip
+
+   Once the tunnel is active, navigate to:
+   http://localhost:5050
+
+2. LOGIN CREDENTIALS:
+   Log in with the credentials set in your `.env` file:
+   - Email: Value of PGADMIN_DEFAULT_EMAIL (e.g. admin@barber.local)
+   - Password: Value of PGADMIN_DEFAULT_PASSWORD
+
+3. REGISTERING THE POSTGRESQL SERVER:
+   Inside the pgAdmin interface, click "Add New Server" and fill in:
+   - General Tab:
+     - Name: Barber PostgreSQL
+   - Connection Tab:
+     - Host name/address: db
+     - Port: 5432
+     - Maintenance database: project1
+     - Username: postgres
+     - Password: <Value of DB_PASSWORD from .env>
+     - Save Password: Check if desired
+
+   IMPORTANT: Do NOT use "localhost" as the host name inside pgAdmin. "db" is the internal Docker service name.
+
+4. PERSISTENCE & LIFECYCLE:
+   - All server registrations, preferences, and query history persist in the Docker named volume `pgadmin_data`.
+   - To restart pgAdmin: docker compose restart pgadmin
+   - To view pgAdmin logs: docker compose logs -f pgadmin

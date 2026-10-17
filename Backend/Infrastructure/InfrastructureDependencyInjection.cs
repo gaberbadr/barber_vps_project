@@ -10,6 +10,7 @@ using Infrastructure.Authentication;
 using Infrastructure.Caching.Options;
 using Infrastructure.Email;
 using Infrastructure.Persistence.Repositories;
+using Infrastructure.Storage.Options;
 using Infrastructure.Storage.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -39,7 +40,8 @@ namespace Infrastructure
             // Register TimeProvider
             services.AddSingleton<TimeProvider, EgyptTimeProvider>();
 
-            // Removed Cloudinary AddStorageServices
+            // Local file storage with size-aware progressive WebP optimization
+            services.Configure<LocalStorageOptions>(configuration.GetSection("LocalStorage"));
             services.AddScoped<IFileStorageService, LocalFileStorageService>();
             
             AddEmailServices(services, configuration);
