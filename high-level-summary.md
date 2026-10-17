@@ -37,7 +37,7 @@ For local development on your machine, `docker-compose.yml` provides a multi-con
 
 ## 3. Configuration & Environment Variables
 
-- **The Backend**: Reads `DATABASE_URL` (or `ConnectionStrings__DefaultConnection`) and `REDIS_URL` (or `ConnectionStrings__REDIS_URL`). Automatically detects and handles URL-encoded passwords, postgresql/redis URI schemes, and Blitz.cloud managed hosts.
+- **The Backend**: In production, `DATABASE_URL` (injected by Blitz Managed PostgreSQL) is authoritative and mandatory. In local development, `DATABASE_URL` or `ConnectionStrings__DefaultConnection` is supported. `REDIS_URL` connects securely to Upstash with TLS (`rediss://`). All connection URIs are parsed dynamically into ADO.NET Npgsql and StackExchange.Redis options with full SSL/SNI support and zero secret leakage.
 - **Security & JWT**: Configured via `JWT__Key`, `JWT__Issuer`, and `JWT__Audience`.
 - **Reverse Proxy & Forwarded Headers**: ASP.NET Core `UseForwardedHeaders` parses `X-Forwarded-For`, `X-Forwarded-Proto`, and `X-Forwarded-Host` while trusting proxy networks. `HttpsPort` is set to 443 to avoid redirect warnings.
 - **Google OAuth**: Preserves callback at `/signin-google` with matching public HTTPS domain.

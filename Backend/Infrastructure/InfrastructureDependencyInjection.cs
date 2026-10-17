@@ -57,31 +57,49 @@ namespace Infrastructure
             IServiceCollection services,
             IConfiguration configuration)
         {
-            var defaultConn = configuration.GetConnectionString("DefaultConnection");
+            var isProduction = string.Equals(
+                configuration["ASPNETCORE_ENVIRONMENT"] ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+                "Production",
+                StringComparison.OrdinalIgnoreCase);
+
             var databaseUrl = configuration["DATABASE_URL"]
                 ?? configuration.GetConnectionString("DATABASE_URL")
                 ?? configuration["POSTGRES_URL"];
 
-            // Prioritize DATABASE_URL (injected by Blitz Managed PostgreSQL or configured in environment)
             string rawConnectionString;
-            if (!string.IsNullOrWhiteSpace(databaseUrl))
+
+            if (isProduction)
             {
+                // In production, DATABASE_URL injected by Blitz.cloud Managed PostgreSQL is authoritative.
+                // Fail fast with clear diagnostic message; never silently fall back to legacy connection strings.
+                if (string.IsNullOrWhiteSpace(databaseUrl))
+                {
+                    throw new InvalidOperationException(
+                        "Production database configuration failed: DATABASE_URL is not set. " +
+                        "In Blitz.cloud, connect your Managed PostgreSQL database ('barberDB') or configure DATABASE_URL in Environment Variables.");
+                }
+
                 rawConnectionString = databaseUrl;
-            }
-            else if (!string.IsNullOrWhiteSpace(defaultConn) &&
-                     !defaultConn.Contains("Host=db", StringComparison.OrdinalIgnoreCase) &&
-                     !defaultConn.Contains("Server=db", StringComparison.OrdinalIgnoreCase))
-            {
-                rawConnectionString = defaultConn;
             }
             else
             {
-                rawConnectionString = defaultConn ?? string.Empty;
-            }
+                // Local development / testing: prioritize DATABASE_URL if configured, otherwise use DefaultConnection
+                var defaultConn = configuration.GetConnectionString("DefaultConnection");
 
-            if (string.IsNullOrWhiteSpace(rawConnectionString))
-                throw new InvalidOperationException(
-                    "Database connection string is not configured. Set DATABASE_URL or ConnectionStrings:DefaultConnection.");
+                if (!string.IsNullOrWhiteSpace(databaseUrl))
+                {
+                    rawConnectionString = databaseUrl;
+                }
+                else if (!string.IsNullOrWhiteSpace(defaultConn))
+                {
+                    rawConnectionString = defaultConn;
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        "Database connection string is not configured. Set DATABASE_URL or ConnectionStrings:DefaultConnection in your local environment.");
+                }
+            }
 
             var connectionString = FormatPostgresConnectionString(rawConnectionString);
 

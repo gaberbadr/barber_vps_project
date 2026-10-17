@@ -60,14 +60,15 @@ The repository now includes a production-grade multi-stage root `Dockerfile`:
 - Easily fits in Blitz's 512 MB Free Plan alongside Managed PostgreSQL (128 MB).
 
 --------------------------------------------------------------------------------
-STEP 1: PROVISION MANAGED POSTGRESQL ON BLITZ.CLOUD
+STEP 1: CONNECT MANAGED POSTGRESQL (barberDB)
 --------------------------------------------------------------------------------
 1. In Blitz.cloud dashboard (https://dashboard.blitz.cloud/databases), open your existing
    PostgreSQL database: `barberDB` (status: Ready).
 2. Click the "Connect an app" button on the `barberDB` card and select your `barber` application.
    - Blitz will automatically link the database and inject `DATABASE_URL`.
-   - Alternatively, if setting manually in the app's Environment Variables, set:
-     DATABASE_URL=postgresql://barberdb:PASSWORD@db-barberdb:5432/barberdb
+   - Verification: In Application -> Settings -> Environment Variables, confirm `DATABASE_URL` is present.
+   - Note: In Production, the backend requires `DATABASE_URL` and will fail fast at startup if it is missing.
+     Legacy connection strings like `ConnectionStrings__DefaultConnection` are strictly ignored in production.
 
 --------------------------------------------------------------------------------
 STEP 2: VERIFY THE BLITZ.CLOUD APPLICATION
@@ -113,10 +114,9 @@ DOMAIN=barber.devs.surf
 ASPNETCORE_HTTPS_PORT=443
 ASPNETCORE_ENVIRONMENT=Production
 
-# Database (Automatically injected by Blitz when linked in Step 2; verify presence)
-# DATABASE_URL=postgresql://user:password@host:5432/name
-# IMPORTANT: Delete or remove any old "ConnectionStrings__DefaultConnection=Host=db..."
-# variable from your dashboard settings so it does not conflict!
+# Database: Authoritative production database URL (Injected by Blitz when linked in Step 1)
+# DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE
+# (Do NOT set ConnectionStrings__DefaultConnection in Blitz dashboard; it is local-dev only)
 
 # Redis Cache Settings
 CacheSettings__Redis__Enabled=true
