@@ -31,9 +31,9 @@ For local development on your machine, `docker-compose.yml` provides a multi-con
 - **Frontend (`barber-frontend`)**: Nginx alpine container serving the React SPA on port 80.
 - **Backend (`barber-api`)**: ASP.NET Core API running on port 8080.
 - **Reverse Proxy (`barber-nginx`)**: Self-contained Nginx image (`nginx/Dockerfile`) routing `/` to `frontend:80` and `/api/`, `/swagger/`, `/health`, `/files/`, `/signin-google` to `backend:8080`.
-- **Database (`barber-postgres`)**: PostgreSQL 16 container storing data in named volume `postgres_data`.
+- **Database**: Connects to Blitz's managed PostgreSQL database via `DATABASE_URL`. Self-hosted PostgreSQL container and local `postgres_data` volume have been removed.
 - **Cache**: Connects to the external Upstash Redis instance (or in-memory cache). Obsolete local Redis container removed.
-- **Database Management**: Managed externally from your PC using pgAdmin 4 or DBeaver connected directly to PostgreSQL.
+- **Database Management**: Managed externally from your PC using pgAdmin 4 or DBeaver connected directly to Blitz's managed PostgreSQL database.
 
 ## 3. Configuration & Environment Variables
 

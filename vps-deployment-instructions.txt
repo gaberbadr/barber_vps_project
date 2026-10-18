@@ -190,13 +190,11 @@ For multi-container deployment on a VPS or local workstation with Docker Compose
 This runs:
 - `barber-api`: ASP.NET Core 8 Backend API (internal port 8080)
 - `barber-frontend`: React SPA (internal port 80)
-- `barber-postgres`: PostgreSQL 16 (internal port 5432, persisted in postgres_data)
 - `barber-nginx`: Nginx reverse proxy routing traffic on port 80
 
 DATABASE MANAGEMENT (EXTERNAL FROM YOUR PC):
-- On Blitz.cloud: Connect to 'barberDB' directly using a local client (pgAdmin 4,
-  DBeaver, TablePlus, or VS Code Database extension) using the external connection
+- Connect to 'barberDB' directly using a local client (pgAdmin 4, DBeaver,
+  TablePlus, or VS Code Database extension) using the external connection
   string provided in Blitz.cloud Dashboard -> Databases -> barberDB.
-- On Local Dev / VPS: Connect to localhost:5432 with your configured DB_PASSWORD.
 ================================================================================
 
